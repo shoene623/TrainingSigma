@@ -12,13 +12,15 @@ const CreateClassRequest = () => {
   const [formData, setFormData] = useState({
     companyId: "",
     siteId: "",
-    classTypes: [], // Updated to store selected class types
+    classTypes: [],
     preferredDateStart: "",
     preferredDateEnd: "",
     notes: "",
+    educatorId: "", 
   })
   const [companies, setCompanies] = useState([])
   const [sites, setSites] = useState([])
+  const [educators, setEducators] = useState([]) // New state for educators
   const [newCompany, setNewCompany] = useState({
     name: "",
     address: "",
@@ -60,6 +62,7 @@ const CreateClassRequest = () => {
 
   useEffect(() => {
     fetchCompanies()
+    fetchEducators() // Fetch educators on component mount
   }, [])
 
   useEffect(() => {
@@ -94,6 +97,20 @@ const CreateClassRequest = () => {
       setSites(data || [])
     } catch (error) {
       console.error("Error fetching sites:", error)
+    }
+  }
+
+  const fetchEducators = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("educators")
+        .select("pkEducatorID, first, last, teach_state")
+        .order("last", { ascending: true })
+
+      if (error) throw error
+      setEducators(data || [])
+    } catch (error) {
+      console.error("Error fetching educators:", error)
     }
   }
 
@@ -191,19 +208,33 @@ const CreateClassRequest = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const { error } = await supabase.from("pending_class").insert({
-        company_id: formData.companyId,
-        site_id: formData.siteId,
-        class_types: formData.classTypes.join(", "), // Save as a comma-separated string
+      // Fetch the current session to get the user ID
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+  
+      if (sessionError) throw sessionError
+  
+      const userId = session?.user?.id // Get the user ID from the session
+  
+      if (!userId) {
+        throw new Error("User is not authenticated.")
+      }
+  
+      const { error } = await supabase.from("training_class").insert({
+        class_type: formData.classTypes.join(", "), // Save as a comma-separated string
         preferred_date_start: formData.preferredDateStart,
         preferred_date_end: formData.preferredDateEnd,
-        notes: formData.notes,
+        coordinator_id: userId, // Use the authenticated user's ID
+        fkSiteID: formData.siteId,
         status: "pending",
-        created_by: supabase.auth.user().id,
+        notes: formData.notes,
+        fkEducatorID: formData.educatorId, // Selected educator
       })
-
+  
       if (error) throw error
-
+  
       toast({
         title: "Class Request Created",
         description: "The class request has been successfully created.",
@@ -235,6 +266,11 @@ const CreateClassRequest = () => {
         </span>
       </div>
     ),
+  }))
+
+  const educatorOptions = educators.map((educator) => ({
+    value: educator.pkEducatorID,
+    label: `${educator.first} ${educator.last} (${educator.teach_state})`,
   }))
 
   return (
@@ -347,6 +383,20 @@ const CreateClassRequest = () => {
           </div>
         )}
 
+        {/* Educator Dropdown */}
+        <div>
+          <label htmlFor="educatorId" className="block text-sm font-medium">
+            Select Educator
+          </label>
+          <Select
+            options={educatorOptions}
+            value={educatorOptions.find((option) => option.value === formData.educatorId)}
+            onChange={(selectedOption) => setFormData({ ...formData, educatorId: selectedOption.value })}
+            className="w-full"
+            placeholder="Choose an educator"
+          />
+        </div>
+
         {/* Class Type Checkboxes */}
         <div>
           <label htmlFor="classTypes" className="block text-sm font-medium">
@@ -412,7 +462,15 @@ const CreateClassRequest = () => {
           />
         </div>
 
-        <Button type="submit" disabled={!formData.companyId || !formData.siteId || formData.classTypes.length === 0}>
+        <Button
+          type="submit"
+          disabled={
+            !formData.companyId ||
+            !formData.siteId ||
+            formData.classTypes.length === 0 ||
+            !formData.educatorId
+          }
+        >
           Submit Request
         </Button>
       </form>

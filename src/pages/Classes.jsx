@@ -176,30 +176,36 @@ const Classes = ({ userRole }) => {
         </div>
 
         <div className="flex flex-1 gap-4">
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Time period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Classes</SelectItem>
-              <SelectItem value="upcoming">Upcoming Classes</SelectItem>
-              <SelectItem value="past">Past Classes</SelectItem>
-            </SelectContent>
-          </Select>
+        <Select
+  value={timeFilter}
+  onValueChange={setTimeFilter}
+>
+        <SelectTrigger className="w-full sm:w-[180px] bg-white border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500">
+          <SelectValue placeholder="Time period" />
+        </SelectTrigger>
+        <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg">
+          <SelectItem value="all">All Classes</SelectItem>
+          <SelectItem value="upcoming">Upcoming Classes</SelectItem>
+          <SelectItem value="past">Past Classes</SelectItem>
+        </SelectContent>
+      </Select>
 
-          <Select value={stateFilter} onValueChange={setStateFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All States</SelectItem>
-              {states.map((state) => (
-                <SelectItem key={state} value={state}>
-                  {state}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <Select
+        value={stateFilter}
+        onValueChange={setStateFilter}
+      >
+        <SelectTrigger className="w-full sm:w-[180px] bg-white border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500">
+          <SelectValue placeholder="Select state" />
+        </SelectTrigger>
+        <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg">
+          <SelectItem value="">All States</SelectItem>
+          {states.map((state) => (
+            <SelectItem key={state} value={state}>
+              {state}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
         </div>
       </div>
 

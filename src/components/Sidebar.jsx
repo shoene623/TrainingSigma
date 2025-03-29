@@ -1,0 +1,173 @@
+"use client"
+
+import { Link, useLocation } from "react-router-dom"
+import { useState } from "react"
+
+const Sidebar = ({ open, setOpen, userRole }) => {
+  const location = useLocation()
+  const [pendingClassOpen, setPendingClassOpen] = useState(false) // State for dropdown toggle
+
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: "home" },
+    { name: "Classes", href: "/classes", icon: "calendar" },
+    { name: "Educators", href: "/educators", icon: "users" },
+    { name: "Students", href: "/students", icon: "graduation-cap" },
+    { name: "Settings", href: "/settings", icon: "settings" },
+  ]
+
+  const pendingClassActions = [
+    { name: "Create Class", href: "/create-class" },
+    { name: "Assign Educator", href: "/assign-educator/1" }, // Example requestId
+    { name: "Educator Response", href: "/educator-response/1" }, // Example requestId
+    { name: "Confirm Class", href: "/confirm-class/1" }, // Example requestId
+  ]
+
+  const icons = {
+    home: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+    ),
+    calendar: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+        <line x1="16" x2="16" y1="2" y2="6"></line>
+        <line x1="8" x2="8" y1="2" y2="6"></line>
+        <line x1="3" x2="21" y1="10" y2="10"></line>
+      </svg>
+    ),
+    users: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+    ),
+    "graduation-cap": (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+      </svg>
+    ),
+    settings: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l-.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+    ),
+  }
+
+  return (
+    <>
+      {/* Sidebar */}
+      <div className="sidebar">
+        <nav>
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              to={item.href}
+              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                location.pathname === item.href ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+              }`}
+              onClick={() => setOpen(false)}
+            >
+              <span className="mr-3">{icons[item.icon]}</span>
+              {item.name}
+            </Link>
+          ))}
+
+          {/* Pending Class Dropdown */}
+          <div className="flex flex-col">
+            <button
+              className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100"
+              onClick={() => setPendingClassOpen(!pendingClassOpen)}
+            >
+              <span className="mr-3 text-gray-400">{icons.calendar}</span>
+              Pending Class
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`ml-auto h-4 w-4 transform ${pendingClassOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {pendingClassOpen && (
+              <div className="ml-6 mt-1 space-y-1">
+                {pendingClassActions.map((action) => (
+                  <Link
+                    key={action.name}
+                    to={action.href}
+                    className="block px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100"
+                    onClick={() => {
+                      console.log("Navigating to:", action.href)
+                      setOpen(false)
+                    }}
+                  >
+                    {action.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </nav>
+      </div>
+    </>
+  )
+}
+
+export default Sidebar

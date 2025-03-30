@@ -27,7 +27,7 @@ const Classes = ({ userRole }) => {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [sortColumn, setSortColumn] = useState("dateofclass")
-  const [sortOrder, setSortOrder] = useState("asc") // "asc" or "desc"
+  const [sortOrder, setSortOrder] = useState("asc")
   const itemsPerPage = 10
 
   useEffect(() => {
@@ -37,9 +37,18 @@ const Classes = ({ userRole }) => {
 
   const fetchStates = async () => {
     try {
-      const { data } = await supabase.from("trainingLog").select("state").not("state", "is", null).order("state", { ascending: true })
-
-      const uniqueStates = [...new Set(data.map((item) => item.state))]
+      const { data, error } = await supabase
+        .from("trainingLog")
+        .select("sites.SiteState")
+        .not("sites.SiteState", "is", null)
+        .order("sites.SiteState", { ascending: true })
+  
+      if (error) {
+        throw error
+      }
+  
+      // Ensure `data` is not null or undefined
+      const uniqueStates = [...new Set((data || []).map((item) => item.sites?.SiteState))].filter(Boolean)
       setStates(uniqueStates)
     } catch (error) {
       console.error("Error fetching states:", error)
@@ -55,31 +64,38 @@ const Classes = ({ userRole }) => {
           `
           pkTrainingLogID,
           dateofclass,
-          company,
-          state,
-          instructor,
           fkEducatorID,
           educators:fkEducatorID (
             pkEducatorID,
             first,
             last
+          ),
+          sites:fkSiteID (
+            SiteName,
+            SiteAdd1,
+            SiteCity,
+            SiteState,
+            SiteZip,
+            companies:fkCompID (
+              CompName
+            )
           )
         `,
-          { count: "exact" } // Include the count option here
+          { count: "exact" }
         )
         .order(sortColumn, { ascending: sortOrder === "asc" })
-  
+
       const today = new Date().toISOString().split("T")[0]
       if (timeFilter === "upcoming") {
-        query = query.gte("dateofclass", today)
+        query = query.gte("dateofclass", today) // Filter for future classes
       } else if (timeFilter === "past") {
         query = query.lt("dateofclass", today)
       }
-  
+
       if (stateFilter) {
-        query = query.eq("state", stateFilter)
+        query = query.eq("sites.SiteState", stateFilter)
       }
-  
+
       if (userRole === "educator") {
         const { data: userData } = await supabase.auth.getUser()
         if (userData?.user) {
@@ -88,22 +104,22 @@ const Classes = ({ userRole }) => {
             .select("pkEducatorID")
             .eq("auth_id", userData.user.id)
             .single()
-  
+
           if (educatorData) {
             query = query.eq("fkEducatorID", educatorData.pkEducatorID)
           }
         }
       }
-  
+
       const from = (page - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
       query = query.range(from, to)
-  
+
       const { data, count, error } = await query
-  
+
       if (error) throw error
       setClasses(data || [])
-      setTotalPages(Math.ceil(count / itemsPerPage)) // Use the count value here
+      setTotalPages(Math.ceil(count / itemsPerPage))
     } catch (error) {
       console.error("Error fetching classes:", error)
     } finally {
@@ -129,7 +145,17 @@ const Classes = ({ userRole }) => {
     if (classItem.educators) {
       return `${classItem.educators.first} ${classItem.educators.last}`
     }
-    return classItem.instructor || "Not assigned"
+    return "Not assigned"
+  }
+
+  const getCompanyName = (classItem) => {
+    return classItem.sites?.companies?.CompName || "N/A"
+  }
+
+  const getSiteDetails = (classItem) => {
+    const site = classItem.sites
+    if (!site) return "N/A"
+    return `${site.SiteAdd1 || ""}, ${site.SiteCity || ""}, ${site.SiteState || ""} ${site.SiteZip || ""}`
   }
 
   const handleSort = (column) => {
@@ -143,8 +169,8 @@ const Classes = ({ userRole }) => {
 
   const filteredClasses = classes.filter(
     (classItem) =>
-      classItem.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      classItem.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getCompanyName(classItem).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getSiteDetails(classItem).toLowerCase().includes(searchTerm.toLowerCase()) ||
       getEducatorName(classItem).toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
@@ -152,14 +178,9 @@ const Classes = ({ userRole }) => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
-        {userRole === "admin" && (
-          <Button asChild>
-            <Link to="/classes/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Class
-            </Link>
-          </Button>
-        )}
+        <Link to="/training-log" className="btn btn-primary">
+          View Training Log
+        </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -176,36 +197,30 @@ const Classes = ({ userRole }) => {
         </div>
 
         <div className="flex flex-1 gap-4">
-        <Select
-  value={timeFilter}
-  onValueChange={setTimeFilter}
->
-        <SelectTrigger className="w-full sm:w-[180px] bg-white border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500">
-          <SelectValue placeholder="Time period" />
-        </SelectTrigger>
-        <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg">
-          <SelectItem value="all">All Classes</SelectItem>
-          <SelectItem value="upcoming">Upcoming Classes</SelectItem>
-          <SelectItem value="past">Past Classes</SelectItem>
-        </SelectContent>
-      </Select>
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-white border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500">
+              <SelectValue placeholder="Time period" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg">
+              <SelectItem value="all">All Classes</SelectItem>
+              <SelectItem value="upcoming">Upcoming Classes</SelectItem>
+              <SelectItem value="past">Past Classes</SelectItem>
+            </SelectContent>
+          </Select>
 
-      <Select
-        value={stateFilter}
-        onValueChange={setStateFilter}
-      >
-        <SelectTrigger className="w-full sm:w-[180px] bg-white border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500">
-          <SelectValue placeholder="Select state" />
-        </SelectTrigger>
-        <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg">
-          <SelectItem value="">All States</SelectItem>
-          {states.map((state) => (
-            <SelectItem key={state} value={state}>
-              {state}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <Select value={stateFilter} onValueChange={setStateFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-white border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500">
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg">
+              <SelectItem value="">All States</SelectItem>
+              {states.map((state) => (
+                <SelectItem key={state} value={state}>
+                  {state}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -220,7 +235,7 @@ const Classes = ({ userRole }) => {
                 Company {sortColumn === "company" && (sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />)}
               </TableHead>
               <TableHead onClick={() => handleSort("state")}>
-                State {sortColumn === "state" && (sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />)}
+                Site Details {sortColumn === "state" && (sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />)}
               </TableHead>
               <TableHead onClick={() => handleSort("instructor")}>
                 Educator {sortColumn === "instructor" && (sortOrder === "asc" ? <ChevronUp /> : <ChevronDown />)}
@@ -248,8 +263,8 @@ const Classes = ({ userRole }) => {
                       {formatDate(classItem.dateofclass)}
                     </div>
                   </TableCell>
-                  <TableCell>{classItem.company || "N/A"}</TableCell>
-                  <TableCell>{classItem.state || "N/A"}</TableCell>
+                  <TableCell>{getCompanyName(classItem)}</TableCell>
+                  <TableCell>{getSiteDetails(classItem)}</TableCell>
                   <TableCell>{getEducatorName(classItem)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild>

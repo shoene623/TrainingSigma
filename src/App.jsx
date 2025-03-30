@@ -3,11 +3,7 @@
 import { useState, useEffect } from "react"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { supabase } from "./supabaseClient"
-
-// Layouts
 import MainLayout from "./layouts/MainLayout"
-
-// Pages
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import Classes from "./pages/Classes"
@@ -21,6 +17,8 @@ import EducatorResponse from "./pages/EducatorResponse"
 import ConfirmClass from "./pages/ConfirmClass"
 import NotFound from "./pages/NotFound"
 import NewStudent from "./pages/NewStudent"
+import PendingClass from "./pages/PendingClass"
+import TrainingLog from "./pages/TrainingLog"
 
 function App() {
   const [session, setSession] = useState(null)
@@ -78,7 +76,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes */}
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/dashboard" />} />
+
+        {/* Protected Routes */}
         <Route
           path="/"
           element={
@@ -91,15 +92,89 @@ function App() {
           <Route path="dashboard" element={<Dashboard userRole={userRole} />} />
           <Route path="classes" element={<Classes userRole={userRole} />} />
           <Route path="classes/:id" element={<ClassDetails userRole={userRole} />} />
-          <Route path="educators" element={<ProtectedRoute allowedRoles={["admin", "LifeSafe"]}><Educators /></ProtectedRoute>} />
-          <Route path="educators/profile" element={<ProtectedRoute allowedRoles={["educator", "LifeSafe"]}><EducatorProfile /></ProtectedRoute>} />
-          <Route path="students" element={<ProtectedRoute allowedRoles={["admin", "educator", "LifeSafe"]}><Students /></ProtectedRoute>} />
-          <Route path="create-class" element={<ProtectedRoute allowedRoles={["admin", "LifeSafe"]}><CreateClassRequest /></ProtectedRoute>} />
-          <Route path="assign-educator/:requestId" element={<ProtectedRoute allowedRoles={["admin", "LifeSafe"]}><AssignEducator /></ProtectedRoute>} />
-          <Route path="educator-response/:requestId" element={<ProtectedRoute allowedRoles={["educator", "LifeSafe"]}><EducatorResponse /></ProtectedRoute>} />
-          <Route path="confirm-class/:requestId" element={<ProtectedRoute allowedRoles={["admin", "LifeSafe"]}><ConfirmClass /></ProtectedRoute>} />
-          <Route path="students/new" element={<ProtectedRoute allowedRoles={["admin", "LifeSafe"]}><NewStudent /></ProtectedRoute>} />
+          <Route
+            path="educators"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <Educators />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="educators/profile"
+            element={
+              <ProtectedRoute allowedRoles={["educator", "LifeSafe"]}>
+                <EducatorProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="students"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "educator", "LifeSafe"]}>
+                <Students />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="create-class"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <CreateClassRequest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="assign-educator/:requestId"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <AssignEducator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="educator-response/:requestId"
+            element={
+              <ProtectedRoute allowedRoles={["educator", "LifeSafe"]}>
+                <EducatorResponse />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="confirm-class/:requestId"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <ConfirmClass />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="students/new"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <NewStudent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="pending-classes"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <PendingClass />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="training-log"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <TrainingLog />
+              </ProtectedRoute>
+            }
+          />
         </Route>
+
+        {/* Catch-All Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

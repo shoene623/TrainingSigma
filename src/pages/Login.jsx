@@ -75,7 +75,7 @@ const Login = () => {
       <div className="w-full max-w-md p-4">
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title text-center">ATEM Safety Training App</h2>
+            <h2 className="card-title text-center">LifeSafe Service Training Portal</h2>
             <p className="card-description text-center">Manage your safety training classes and educators</p>
           </div>
 

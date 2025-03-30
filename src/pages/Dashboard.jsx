@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { supabase } from "../supabaseClient"
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs"
 
 const Dashboard = ({ userRole }) => {
   const [stats, setStats] = useState({
@@ -10,6 +11,7 @@ const Dashboard = ({ userRole }) => {
     totalEducators: 0,
     totalStudents: 0,
     pendingRequests: 0,
+    queueCount: 0, // New state for queue count
   })
   const [recentClasses, setRecentClasses] = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
@@ -19,12 +21,23 @@ const Dashboard = ({ userRole }) => {
     const fetchDashboardData = async () => {
       setLoading(true)
       try {
+        // Fetch the current user
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
+        if (sessionError) throw sessionError
+
+        const userId = session?.user?.id
+
         // Fetch stats
-        const [classesResponse, educatorsResponse, studentsResponse, requestsResponse] = await Promise.all([
+        const [classesResponse, educatorsResponse, studentsResponse, requestsResponse, queueResponse] = await Promise.all([
           supabase.from("trainingLog").select("count", { count: "exact" }).gte("dateofclass", new Date().toISOString().split("T")[0]),
           supabase.from("educators").select("count", { count: "exact" }),
           supabase.from("students").select("count", { count: "exact" }),
-          supabase.from("pending_class").select("count", { count: "exact" }).eq("status", "pending"), // Updated table name
+          supabase.from("pending_class").select("count", { count: "exact" }).eq("status", "pending"),
+          supabase.from("pending_class").select("count", { count: "exact" }).eq("queue_user_id", userId), // Count for queue_user_id
         ])
 
         // Fetch recent classes
@@ -45,24 +58,29 @@ const Dashboard = ({ userRole }) => {
           .limit(5)
 
         // Fetch pending requests
-        const { data: pendingRequestsData } = await supabase
-          .from("pending_class") // Updated table name
-          .select(`
-            pktrainingclassid,
-            class_type,
-            preferred_date_start,
-            preferred_date_end,
-            address,
-            status
-          `)
-          .eq("status", "pending")
-          .order("preferred_date_start", { ascending: true })
+        const { data: pendingRequestsData, error } = await supabase
+            .from("pending_class")
+            .select(`
+              pktrainingclassid,
+              class_type,
+              preferred_date_start,
+              preferred_date_end,
+              status
+            `)
+            .order("preferred_date_start", { ascending: true }) // Order by preferred_date_start without filtering by status
+
+          if (error) {
+            console.error("Error fetching pending requests:", error) 
+          } else {
+            setPendingRequests(pendingRequestsData || [])
+          }
 
         setStats({
           upcomingClasses: classesResponse.count || 0,
           totalEducators: educatorsResponse.count || 0,
           totalStudents: studentsResponse.count || 0,
           pendingRequests: requestsResponse.count || 0,
+          queueCount: queueResponse.count || 0, // Set queue count
         })
 
         setRecentClasses(recentClassesData || [])
@@ -139,6 +157,17 @@ const Dashboard = ({ userRole }) => {
             <div className="card-content">
               <div className="text-2xl font-bold">{stats.pendingRequests}</div>
               <p className="text-xs text-muted-foreground">Class requests awaiting action</p>
+            </div>
+          </div>
+
+          {/* New Queue Count Alert */}
+          <div className="card">
+            <div className="card-header">
+              <h3 className="text-sm font-medium">Your Queue</h3>
+            </div>
+            <div className="card-content">
+              <div className="text-2xl font-bold">{stats.queueCount}</div>
+              <p className="text-xs text-muted-foreground">Requests assigned to you</p>
             </div>
           </div>
         </div>

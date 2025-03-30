@@ -222,15 +222,17 @@ const CreateClassRequest = () => {
         throw new Error("User is not authenticated.")
       }
   
-      const { error } = await supabase.from("training_class").insert({
+      // Insert into the pending_class table
+      const { error } = await supabase.from("pending_class").insert({
         class_type: formData.classTypes.join(", "), // Save as a comma-separated string
         preferred_date_start: formData.preferredDateStart,
         preferred_date_end: formData.preferredDateEnd,
         coordinator_id: userId, // Use the authenticated user's ID
         fkSiteID: formData.siteId,
-        status: "pending",
         notes: formData.notes,
         fkEducatorID: formData.educatorId, // Selected educator
+        queue_user_id: "0ae68bcb-e6f4-4b59-ba1b-c73b46ac8820", 
+        status: "Confirm Educator Dates", 
       })
   
       if (error) throw error

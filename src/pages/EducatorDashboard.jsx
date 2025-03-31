@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { useNavigate } from "react-router-dom";
 import { Calendar } from "lucide-react";
 
 const EducatorDashboard = () => {
   const [pendingClasses, setPendingClasses] = useState([]);
   const [upcomingClasses, setUpcomingClasses] = useState([]);
   const [pastClasses, setPastClasses] = useState([]);
+  const [selectedClass, setSelectedClass] = useState(null); // State for selected class
   const [loading, setLoading] = useState(true);
   const [educatorId, setEducatorId] = useState(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchEducatorId();
@@ -99,56 +98,8 @@ const EducatorDashboard = () => {
     }
   };
 
-  const handleClassDateChange = async (pktrainingclassid, newDate) => {
-    try {
-      const { error } = await supabase
-        .from("pending_class")
-        .update({ class_date: newDate })
-        .eq("pktrainingclassid", pktrainingclassid);
-
-      if (error) throw error;
-
-      // Update local state
-      setPendingClasses((prev) =>
-        prev.map((classItem) =>
-          classItem.pktrainingclassid === pktrainingclassid
-            ? { ...classItem, class_date: newDate }
-            : classItem
-        )
-      );
-    } catch (error) {
-      console.error("Error updating class date:", error.message);
-    }
-  };
-
-  const handleMoveToFinalConfirmation = async (classItem) => {
-    if (!classItem.class_date) {
-      alert("Please provide a class date before moving to Final Confirmation.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("pending_class")
-        .update({
-          status: "Final Confirmation",
-          queue_user_id: classItem.coordinator_id, // Assign back to the coordinator
-        })
-        .eq("pktrainingclassid", classItem.pktrainingclassid);
-
-      if (error) throw error;
-
-      // Update local state
-      setPendingClasses((prev) =>
-        prev.map((pendingClass) =>
-          pendingClass.pktrainingclassid === classItem.pktrainingclassid
-            ? { ...pendingClass, status: "Final Confirmation", queue_user_id: classItem.coordinator_id }
-            : pendingClass
-        )
-      );
-    } catch (error) {
-      console.error("Error moving to Final Confirmation:", error.message);
-    }
+  const handleClassClick = (classItem) => {
+    setSelectedClass(classItem); // Set the selected class
   };
 
   const formatDate = (dateString) => {
@@ -182,54 +133,33 @@ const EducatorDashboard = () => {
                     <tr>
                       <th className="px-4 py-2 border-b">Class Type</th>
                       <th className="px-4 py-2 border-b">Preferred Dates</th>
-                      <th className="px-4 py-2 border-b">Coordinator</th>
                       <th className="px-4 py-2 border-b">Assigned To</th>
                       <th className="px-4 py-2 border-b">Site</th>
                       <th className="px-4 py-2 border-b">Educator</th>
                       <th className="px-4 py-2 border-b">Status</th>
-                      <th className="px-4 py-2 border-b">Class Date</th>
-                      <th className="px-4 py-2 border-b">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pendingClasses.map((classItem) => (
-                      <tr key={classItem.pktrainingclassid}>
+                      <tr
+                        key={classItem.pktrainingclassid}
+                        onClick={() => handleClassClick(classItem)}
+                        className="cursor-pointer hover:bg-gray-100"
+                      >
                         <td className="px-4 py-2 border-b">{classItem.class_type}</td>
                         <td className="px-4 py-2 border-b">
                           {formatDate(classItem.preferred_date_start)} - {formatDate(classItem.preferred_date_end)}
-                        </td>
-                        <td className="px-4 py-2 border-b">
-                          {classItem.profiles_coordinator?.firstName} {classItem.profiles_coordinator?.lastName}
                         </td>
                         <td className="px-4 py-2 border-b">
                           {classItem.profiles_assigned
                             ? `${classItem.profiles_assigned.firstName} ${classItem.profiles_assigned.lastName}`
                             : "Unassigned"}
                         </td>
-
                         <td className="px-4 py-2 border-b">{classItem.sites?.SiteName || "N/A"}</td>
                         <td className="px-4 py-2 border-b">
                           {classItem.educators?.first} {classItem.educators?.last}
                         </td>
                         <td className="px-4 py-2 border-b">{classItem.status || "N/A"}</td>
-                        <td className="px-4 py-2 border-b">
-                          <input
-                            type="date"
-                            value={classItem.class_date || ""}
-                            onChange={(e) => handleClassDateChange(classItem.pktrainingclassid, e.target.value)}
-                            className="border rounded px-2 py-1"
-                          />
-                        </td>
-                        <td className="px-4 py-2 border-b space-y-2">
-                          {classItem.status === "Confirm Educator Dates" && (
-                            <button
-                              onClick={() => handleMoveToFinalConfirmation(classItem)}
-                              className="bg-blue-500 text-white px-2 py-1 rounded"
-                            >
-                              Move to Final Confirmation
-                            </button>
-                          )}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -243,24 +173,30 @@ const EducatorDashboard = () => {
             <div>
               <h2 className="text-2xl font-semibold mb-4">Upcoming Classes</h2>
               {upcomingClasses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {upcomingClasses.map((classItem) => (
-                    <div
-                      key={classItem.pkTrainingLogID}
-                      className="p-4 border rounded-md hover:shadow-lg transition"
-                      onClick={() => navigate(`/classes/${classItem.pkTrainingLogID}`)}
-                    >
-                      <div className="flex items-center mb-2">
-                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium">{formatDate(classItem.dateofclass)}</p>
-                      </div>
-                      <p className="font-semibold">{classItem.subjects}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <table className="min-w-full bg-white border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border-b">Date</th>
+                      <th className="px-4 py-2 border-b">Subjects</th>
+                      <th className="px-4 py-2 border-b">Site</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {upcomingClasses.map((classItem) => (
+                      <tr
+                        key={classItem.pkTrainingLogID}
+                        onClick={() => handleClassClick(classItem)}
+                        className="cursor-pointer hover:bg-gray-100"
+                      >
+                        <td className="px-4 py-2 border-b">{formatDate(classItem.dateofclass)}</td>
+                        <td className="px-4 py-2 border-b">{classItem.subjects}</td>
+                        <td className="px-4 py-2 border-b">
+                          {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <p className="text-muted-foreground">No upcoming classes scheduled.</p>
               )}
@@ -270,28 +206,48 @@ const EducatorDashboard = () => {
             <div>
               <h2 className="text-2xl font-semibold mb-4">Past Classes</h2>
               {pastClasses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {pastClasses.map((classItem) => (
-                    <div
-                      key={classItem.pkTrainingLogID}
-                      className="p-4 border rounded-md hover:shadow-lg transition"
-                      onClick={() => navigate(`/classes/${classItem.pkTrainingLogID}`)}
-                    >
-                      <div className="flex items-center mb-2">
-                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium">{formatDate(classItem.dateofclass)}</p>
-                      </div>
-                      <p className="font-semibold">{classItem.subjects}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <table className="min-w-full bg-white border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-2 border-b">Date</th>
+                      <th className="px-4 py-2 border-b">Subjects</th>
+                      <th className="px-4 py-2 border-b">Site</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pastClasses.map((classItem) => (
+                      <tr
+                        key={classItem.pkTrainingLogID}
+                        onClick={() => handleClassClick(classItem)}
+                        className="cursor-pointer hover:bg-gray-100"
+                      >
+                        <td className="px-4 py-2 border-b">{formatDate(classItem.dateofclass)}</td>
+                        <td className="px-4 py-2 border-b">{classItem.subjects}</td>
+                        <td className="px-4 py-2 border-b">
+                          {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <p className="text-muted-foreground">No past classes found.</p>
               )}
             </div>
+
+            {/* Selected Class Details */}
+            {selectedClass && (
+              <div className="p-4 border rounded-md bg-gray-50">
+                <h2 className="text-xl font-semibold mb-4">Class Details</h2>
+                <p><strong>Class Type:</strong> {selectedClass.class_type || "N/A"}</p>
+                <p><strong>Date:</strong> {formatDate(selectedClass.dateofclass || selectedClass.class_date)}</p>
+                <p><strong>Subjects:</strong> {selectedClass.subjects || "N/A"}</p>
+                <p><strong>Site:</strong> {selectedClass.sites?.SiteName || "N/A"}</p>
+                <p><strong>City:</strong> {selectedClass.sites?.SiteCity || "N/A"}</p>
+                <p><strong>State:</strong> {selectedClass.sites?.SiteState || "N/A"}</p>
+                <p><strong>Status:</strong> {selectedClass.status || "N/A"}</p>
+              </div>
+            )}
           </>
         )}
       </div>

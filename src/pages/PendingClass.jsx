@@ -27,7 +27,7 @@ const PendingClass = ({ userId }) => {
             educator_response_at,
             class_date,
             profiles_coordinator:coordinator_id (firstName, lastName),
-            profiles_assigned:queue_user_id (firstName, lastName),
+            profiles:queue_user_id (firstName, lastName),
             sites:fkSiteID (
               SiteName,
               companies:fkCompID (CompName)
@@ -39,6 +39,7 @@ const PendingClass = ({ userId }) => {
         if (error) {
           console.error("Error fetching pending classes:", error)
         } else {
+          console.log("Fetched pending classes:", data);
           setPendingClasses(data || [])
         }
       } catch (error) {

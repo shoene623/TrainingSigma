@@ -11,7 +11,8 @@ function RoleSelection({ role, setRole }) {
       >
         <option value="" disabled>Select a role</option>
         <option value="client_admin">Client Admin</option>
-        <option value="Inspector">Inspector</option>
+        <option value="client_site">Client Site</option>
+        <option value="educator">Educator</option>
       </select>
     </div>
   );

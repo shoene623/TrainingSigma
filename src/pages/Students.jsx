@@ -36,7 +36,7 @@ const Students = () => {
     try {
       const { data } = await supabase
         .from("trainingLog")
-        .select("pkTrainingLogID, company, dateofclass")
+        .select("pkTrainingLogID, dateofclass")
         .order("dateofclass", { ascending: false })
 
       setClasses(data || [])
@@ -56,29 +56,33 @@ const Students = () => {
           *,
           trainingLog:fkTrainingLogID (
             pkTrainingLogID,
-            company,
-            dateofclass
+            dateofclass,
+            sites:fkSiteID (
+              companies:fkCompID (
+                CompName
+              )
+            )
           )
         `,
           { count: "exact" } // Add the count option here
         )
         .order("name", { ascending: true })
-
+  
       // Apply class filter if selected
       if (classFilter && classFilter !== "all") {
         query = query.eq("fkTrainingLogID", classFilter)
       }
-
+  
       // Get total count for pagination
       const { data: countData, count, error: countError } = await query.range(0, 0) // Fetch only the count
       if (countError) throw countError
       setTotalPages(Math.ceil(count / itemsPerPage))
-
+  
       // Apply pagination
       const from = (page - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
       const { data, error } = await query.range(from, to) // Fetch paginated data
-
+  
       if (error) throw error
       setStudents(data || [])
     } catch (error) {

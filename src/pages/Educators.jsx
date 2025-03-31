@@ -49,7 +49,7 @@ const Educators = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Educators</h1>
         <Button asChild>
-          <Link to="/educators/new">
+          <Link to="/educators/new-educator">
             <Plus className="mr-2 h-4 w-4" />
             New Educator
           </Link>

@@ -19,6 +19,10 @@ import NotFound from "./pages/NotFound"
 import NewStudent from "./pages/NewStudent"
 import PendingClass from "./pages/PendingClass"
 import TrainingLog from "./pages/TrainingLog"
+import NewEducator from "./pages/NewEducator"
+import InviteUser from "./pages/InviteUser"
+import EducatorDashboard from "./pages/EducatorDashboard"
+import ClientDashboard from "./pages/ClientDashboard"
 
 function App() {
   const [session, setSession] = useState(null)
@@ -27,26 +31,54 @@ function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
+      setSession(session);
       if (session) {
-        getUserRole(session.user.id)
+        getUserRole(session.user.id);
       }
-      setLoading(false)
-    })
-
+      setLoading(false);
+    });
+  
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
+      setSession(session);
       if (session) {
-        getUserRole(session.user.id)
+        getUserRole(session.user.id);
       } else {
-        setUserRole(null)
+        setUserRole(null);
       }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+    });
+  
+    return () => subscription.unsubscribe();
+  }, []);
+  
+  async function getUserRole(userId) {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+  
+      if (profileError) throw profileError;
+  
+      const role = profileData.role || "user";
+      setUserRole(role);
+  
+      // Redirect based on role
+      if (role === "educator") {
+        navigate("/educator-dashboard");
+      } else if (role === "client_admin" || role === "client_site") {
+        navigate("/client-dashboard");
+      } else {
+        navigate("/dashboard"); // Default dashboard for other roles
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      setUserRole("user");
+      navigate("/dashboard"); // Default fallback
+    }
+  }
 
   async function getUserRole(userId) {
     try {
@@ -172,8 +204,39 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/educators/new-educator"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+                <NewEducator />
+              </ProtectedRoute>
+            }
+          />
         </Route>
-
+        <Route
+          path="/invite-user"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+              <InviteUser />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/educator-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["educator"]}>
+              <EducatorDashboard />
+            </ProtectedRoute>
+          }
+        />    
+        <Route
+          path="/client-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["client"]}>
+              <ClientDashboard />
+            </ProtectedRoute>
+          }
+        />
         {/* Catch-All Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>

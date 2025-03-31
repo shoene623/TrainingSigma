@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import RoleSelection from "../components/userManagement/RoleSelection";
-import SiteSelection from "../components/userManagement/SiteSelection";
-import CompanySelection from "../components/userManagement/CompanySelection";
 import Select from "react-select";
+import Sidebar from "../components/Sidebar"; // Import Sidebar component
+import Navbar from "../components/Navbar"; // Import Navbar component
 
 function InviteUser() {
   const [email, setEmail] = useState("");
@@ -16,13 +16,16 @@ function InviteUser() {
   const [filteredSites, setFilteredSites] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedSites, setSelectedSites] = useState([]);
+  const [educators, setEducators] = useState([]); // State for educators
+  const [selectedEducator, setSelectedEducator] = useState(null); // Selected educator
   const [invitationSent, setInvitationSent] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch companies & sites when the component mounts
+  // Fetch companies, sites, and educators when the component mounts
   useEffect(() => {
     fetchCompanies();
     fetchSites();
+    fetchEducators();
   }, []);
 
   // Update sites list when a company is selected
@@ -51,6 +54,18 @@ function InviteUser() {
     }
   }
 
+  async function fetchEducators() {
+    const { data, error } = await supabase
+      .from("educators")
+      .select("pkEducatorID, first, last, email1");
+
+    if (error) {
+      console.error("❌ Error fetching educators:", error.message);
+    } else {
+      setEducators(data);
+    }
+  }
+
   function filterSites() {
     if (selectedCompany) {
       setFilteredSites(sites.filter((site) => site.fkCompID === selectedCompany.value));
@@ -59,25 +74,23 @@ function InviteUser() {
     }
   }
 
-  const handleSiteCheckboxChange = (siteId) => {
-    setSelectedSites((prevSelectedSites) =>
-      prevSelectedSites.includes(siteId)
-        ? prevSelectedSites.filter((id) => id !== siteId)
-        : [...prevSelectedSites, siteId]
-    );
-  };
-
   async function inviteUser() {
-    if (!email || !role) {
-      alert("⚠️ Email and role are required.");
+    if (!email && role !== "educator") {
+      alert("⚠️ Email is required.");
+      return;
+    }
+
+    if (!role) {
+      alert("⚠️ Role is required.");
       return;
     }
 
     const requestData = {
-      email,
+      email: role === "educator" && selectedEducator ? selectedEducator.email1 : email,
       role,
       client_id: selectedCompany ? selectedCompany.value : null, // Only send if selected
-      assigned_sites: role === "Inspector" && selectedSites.length > 0 ? selectedSites : [],
+      assigned_sites: role === "client_site" && selectedSites.length > 0 ? selectedSites : [],
+      educator_id: role === "educator" && selectedEducator ? selectedEducator.pkEducatorID : null,
     };
 
     try {
@@ -95,7 +108,7 @@ function InviteUser() {
         throw new Error(result.error || "Failed to invite user");
       }
 
-      alert(`✅ Invite sent to ${email}. Assigned as ${role}.`);
+      alert(`✅ Invite sent to ${requestData.email}. Assigned as ${role}.`);
       setInvitationSent(true);
     } catch (error) {
       console.error("❌ Error inviting user:", error.message);
@@ -113,55 +126,97 @@ function InviteUser() {
     label: `${site.SiteName} - ${site.SiteAdd1}, ${site.SiteCity}, ${site.SiteZip}`,
   }));
 
+  const educatorOptions = educators.map((educator) => ({
+    value: educator.pkEducatorID,
+    label: `${educator.first} ${educator.last} (${educator.email1})`,
+    email1: educator.email1,
+  }));
+
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-800">Invite User & Assign Role</h1>
+    <div className="flex">
+      {/* Sidebar */}
+      <Sidebar />
 
-      <input
-        type="email"
-        placeholder="Enter Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full p-2 border rounded-md"
-      />
+      {/* Main Content */}
+      <div className="flex-1">
+        {/* Navbar */}
+        <Navbar />
 
-      <RoleSelection role={role} setRole={setRole} />
+        {/* Page Content */}
+        <div className="p-6 space-y-8">
+          <h1 className="text-3xl font-bold text-gray-800">Invite User & Assign Role</h1>
 
-      {(role === "client_admin" || role === "Inspector") && (
-        <div>
-          <h2 className="text-xl font-semibold">Assign Company</h2>
-          <Select
-            options={companyOptions}
-            value={selectedCompany}
-            onChange={setSelectedCompany}
-            className="w-full p-2 border rounded-md mb-4"
-          />
+          {/* Email Input */}
+          {role !== "educator" && (
+            <input
+              type="email"
+              placeholder="Enter Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2 border rounded-md"
+            />
+          )}
+
+          {/* Role Selection */}
+          <RoleSelection role={role} setRole={setRole} />
+
+          {/* Educator Selection */}
+          {role === "educator" && (
+            <div>
+              <h2 className="text-xl font-semibold">Select Educator</h2>
+              <Select
+                options={educatorOptions}
+                value={educatorOptions.find((option) => option.value === selectedEducator?.pkEducatorID)}
+                onChange={(selectedOption) =>
+                  setSelectedEducator(
+                    educators.find((educator) => educator.pkEducatorID === selectedOption.value)
+                  )
+                }
+                className="w-full p-2 border rounded-md mb-4"
+              />
+            </div>
+          )}
+
+          {/* Company Selection */}
+          {(role === "client_admin" || role === "client_site") && (
+            <div>
+              <h2 className="text-xl font-semibold">Assign Company</h2>
+              <Select
+                options={companyOptions}
+                value={selectedCompany}
+                onChange={setSelectedCompany}
+                className="w-full p-2 border rounded-md mb-4"
+              />
+            </div>
+          )}
+
+          {/* Site Selection */}
+          {role === "client_site" && (
+            <div>
+              <h2 className="text-xl font-semibold">Assign Sites</h2>
+              <Select
+                options={siteOptions}
+                isMulti
+                value={siteOptions.filter((option) => selectedSites.includes(option.value))}
+                onChange={(selectedOptions) =>
+                  setSelectedSites(selectedOptions.map((option) => option.value))
+                }
+                className="w-full p-2 border rounded-md mb-4"
+              />
+            </div>
+          )}
+
+          {/* Invite Button */}
+          <button
+            onClick={inviteUser}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Send Invite
+          </button>
+
+          {invitationSent && <p className="text-green-600 mt-4">🎉 Invitation sent successfully!</p>}
         </div>
-      )}
-
-      {role === "Inspector" && (
-        <div>
-          <h2 className="text-xl font-semibold">Assign Sites</h2>
-          <Select
-            options={siteOptions}
-            isMulti
-            value={siteOptions.filter((option) => selectedSites.includes(option.value))}
-            onChange={(selectedOptions) =>
-              setSelectedSites(selectedOptions.map((option) => option.value))
-            }
-            className="w-full p-2 border rounded-md mb-4"
-          />
-        </div>
-      )}
-
-      <button
-        onClick={inviteUser}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      >
-        Send Invite
-      </button>
-
-      {invitationSent && <p className="text-green-600 mt-4">🎉 Invitation sent successfully!</p>}
+      </div>
     </div>
   );
 }

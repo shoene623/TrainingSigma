@@ -39,16 +39,18 @@ const Classes = ({ userRole }) => {
     try {
       const { data, error } = await supabase
         .from("trainingLog")
-        .select("sites.SiteState")
-        .not("sites.SiteState", "is", null)
-        .order("sites.SiteState", { ascending: true })
+        .select(`
+          sites:fkSiteID (
+            SiteState
+          )
+        `)
   
       if (error) {
         throw error
       }
   
-      // Ensure `data` is not null or undefined
-      const uniqueStates = [...new Set((data || []).map((item) => item.sites?.SiteState))].filter(Boolean)
+      // Extract and process the states
+      const uniqueStates = [...new Set((data || []).map((item) => item.sites?.SiteState))].filter(Boolean).sort()
       setStates(uniqueStates)
     } catch (error) {
       console.error("Error fetching states:", error)

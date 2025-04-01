@@ -1,11 +1,12 @@
-"use client"
+"use client";
 
-import { Link, useLocation } from "react-router-dom"
-import { useState } from "react"
+import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 
 const Sidebar = ({ open, setOpen, userRole }) => {
-  const location = useLocation()
-  const [pendingClassOpen, setPendingClassOpen] = useState(false) // State for dropdown toggle
+  const location = useLocation();
+  const [pendingClassOpen, setPendingClassOpen] = useState(false); // State for Pending Class dropdown toggle
+  const [emailsOpen, setEmailsOpen] = useState(false); // State for Emails dropdown toggle
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: "home" },
@@ -13,13 +14,18 @@ const Sidebar = ({ open, setOpen, userRole }) => {
     { name: "Educators", href: "/educators", icon: "users" },
     { name: "Students", href: "/students", icon: "graduation-cap" },
     { name: "Invite User", href: "/invite-user", icon: "user-plus" },
-  ]
+  ];
 
   const pendingClassActions = [
     { name: "Create Class", href: "/create-class" },
     { name: "View Pending Classes", href: "/pending-classes" },
-  
-  ]
+  ];
+
+  const emailActions = [
+    { name: "3-Day Confirmation", href: "/emails/3-day-confirmation" },
+    { name: "2-Year Reminder", href: "/emails/2-year-reminder" },
+    { name: "Class Follow Up", href: "/emails/class-follow-up" },
+  ];
 
   const icons = {
     home: (
@@ -91,25 +97,24 @@ const Sidebar = ({ open, setOpen, userRole }) => {
       </svg>
     ),
     "user-plus": (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-      <circle cx="9" cy="7" r="4"></circle>
-      <line x1="19" x2="19" y1="8" y2="14"></line>
-      <line x1="22" x2="16" y1="11" y2="11"></line>
-    </svg>
-  ),
-
-  }
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <line x1="19" x2="19" y1="8" y2="14"></line>
+        <line x1="22" x2="16" y1="11" y2="11"></line>
+      </svg>
+    ),
+  };
 
   return (
     <>
@@ -121,7 +126,9 @@ const Sidebar = ({ open, setOpen, userRole }) => {
               key={item.name}
               to={item.href}
               className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                location.pathname === item.href ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"
+                location.pathname === item.href
+                  ? "bg-primary text-white"
+                  : "text-gray-700 hover:bg-gray-100"
               }`}
               onClick={() => setOpen(false)}
             >
@@ -140,12 +147,19 @@ const Sidebar = ({ open, setOpen, userRole }) => {
               Pending Class
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className={`ml-auto h-4 w-4 transform ${pendingClassOpen ? "rotate-180" : ""}`}
+                className={`ml-auto h-4 w-4 transform ${
+                  pendingClassOpen ? "rotate-180" : ""
+                }`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
             {pendingClassOpen && (
@@ -155,10 +169,48 @@ const Sidebar = ({ open, setOpen, userRole }) => {
                     key={action.name}
                     to={action.href}
                     className="block px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100"
-                    onClick={() => {
-                      console.log("Navigating to:", action.href)
-                      setOpen(false)
-                    }}
+                    onClick={() => setOpen(false)}
+                  >
+                    {action.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Emails Dropdown */}
+          <div className="flex flex-col">
+            <button
+              className="flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100"
+              onClick={() => setEmailsOpen(!emailsOpen)}
+            >
+              <span className="mr-3 text-gray-400">{icons.users}</span>
+              Emails
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`ml-auto h-4 w-4 transform ${
+                  emailsOpen ? "rotate-180" : ""
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            {emailsOpen && (
+              <div className="ml-6 mt-1 space-y-1">
+                {emailActions.map((action) => (
+                  <Link
+                    key={action.name}
+                    to={action.href}
+                    className="block px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100"
+                    onClick={() => setOpen(false)}
                   >
                     {action.name}
                   </Link>
@@ -169,7 +221,7 @@ const Sidebar = ({ open, setOpen, userRole }) => {
         </nav>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

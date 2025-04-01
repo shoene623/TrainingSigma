@@ -227,7 +227,7 @@ const PendingClass = ({ userId }) => {
                 <td className="px-4 py-2 border-b">
                   {pendingClass.profiles_assigned
                     ? `${pendingClass.profiles_assigned.firstName} ${pendingClass.profiles_assigned.lastName}`
-                    : "Unassigned"}
+                    : "Ellen McKee"}
                 </td>
                 <td className="px-4 py-2 border-b">
                   {pendingClass.sites?.companies?.CompName || "N/A"}

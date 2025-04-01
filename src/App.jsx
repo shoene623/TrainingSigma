@@ -23,6 +23,7 @@ import NewEducator from "./pages/NewEducator";
 import InviteUser from "./pages/InviteUser";
 import EducatorDashboard from "./pages/EducatorDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
+import ClientClassRequest from "./pages/ClientClassRequest";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -231,7 +232,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/client-class-request"
+          element={
+            <ProtectedRoute allowedRoles={["client_admin", "client_site"]}>
+              <ClientClassRequest />
+            </ProtectedRoute>
+          }
+        />
         {/* Catch-All Route */}
+        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

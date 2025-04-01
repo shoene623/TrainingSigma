@@ -2,19 +2,18 @@
 
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import Sidebar from "../components/Sidebar"; // Import Sidebar
 import { Input } from "@/components/ui/input";
 
 const ClientClassRequest = () => {
   const [formData, setFormData] = useState({
-    classTypes: [], // Updated to allow multiple selections
+    classTypes: [],
     preferredDateStart: "",
     preferredDateEnd: "",
     notes: "",
   });
-  const { toast } = useToast();
+  const [sidebarOpen, setSidebarOpen] = useState(false); // State for sidebar toggle
   const navigate = useNavigate();
 
   const classTypes = [
@@ -64,7 +63,7 @@ const ClientClassRequest = () => {
       }
 
       const { error } = await supabase.from("pending_class").insert({
-        class_type: formData.classTypes.join(", "), // Join selected class types into a string
+        class_type: formData.classTypes.join(", "),
         preferred_date_start: formData.preferredDateStart,
         preferred_date_end: formData.preferredDateEnd,
         notes: formData.notes,
@@ -74,60 +73,38 @@ const ClientClassRequest = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Class Request Submitted",
-        description: "Your class request has been successfully submitted.",
-      });
+      alert("Class request submitted successfully!");
       navigate("/client-dashboard");
     } catch (error) {
       console.error("Error submitting class request:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to submit the class request.",
-      });
+      alert("Failed to submit the class request.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navigation Bar */}
-      <nav className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary">LifeSafe Services Training Portal</h1>
-          <div className="space-x-4">
-            <button
-              onClick={() => navigate("/client-dashboard")}
-              className="text-gray-700 hover:text-primary font-medium"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => navigate("/classes")}
-              className="text-gray-700 hover:text-primary font-medium"
-            >
-              Classes
-            </button>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="text-red-500 hover:text-red-700 font-medium"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
+    <div className="flex bg-gray-100 min-h-screen">
+      {/* Sidebar */}
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} userRole="client_admin" />
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Request a Class</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex-1 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Request a Class</h1>
+          <button
+            onClick={() => navigate("/client-dashboard")}
+            className="bg-blue-500 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-600 transition"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Class Type Checkboxes */}
           <div>
-            <label htmlFor="classTypes" className="block text-sm font-medium">
+            <label htmlFor="classTypes" className="block text-sm font-medium text-gray-700">
               Select Class Types
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4 mt-2">
               {classTypes.map((classType) => (
                 <div key={classType.name} className="flex items-center">
                   <input
@@ -147,7 +124,7 @@ const ClientClassRequest = () => {
 
           {/* Preferred Dates */}
           <div>
-            <label htmlFor="preferredDateStart" className="block text-sm font-medium">
+            <label htmlFor="preferredDateStart" className="block text-sm font-medium text-gray-700">
               Preferred Start Date
             </label>
             <Input
@@ -160,7 +137,7 @@ const ClientClassRequest = () => {
             />
           </div>
           <div>
-            <label htmlFor="preferredDateEnd" className="block text-sm font-medium">
+            <label htmlFor="preferredDateEnd" className="block text-sm font-medium text-gray-700">
               Preferred End Date
             </label>
             <Input
@@ -175,7 +152,7 @@ const ClientClassRequest = () => {
 
           {/* Notes */}
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium">
+            <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
               Notes
             </label>
             <textarea
@@ -189,7 +166,12 @@ const ClientClassRequest = () => {
             />
           </div>
 
-          <Button type="submit">Submit Request</Button>
+          <button
+            type="submit"
+            className="bg-green-500 text-white px-4 py-2 rounded-md font-semibold hover:bg-green-600 transition"
+          >
+            Submit Request
+          </button>
         </form>
       </div>
     </div>

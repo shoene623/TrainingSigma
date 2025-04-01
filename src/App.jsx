@@ -186,7 +186,7 @@ function App() {
           <Route
             path="pending-classes"
             element={
-              <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+              <ProtectedRoute allowedRoles={["educator","admin", "LifeSafe"]}>
                 <PendingClass />
               </ProtectedRoute>
             }
@@ -234,7 +234,7 @@ function App() {
         />
 
         <Route
-          path="/client-class-request"
+          path="/request-class"
           element={
             <ProtectedRoute allowedRoles={["client_admin", "client_site"]}>
               <ClientClassRequest />

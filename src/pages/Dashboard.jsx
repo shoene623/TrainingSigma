@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
+
 const Dashboard = ({ userRole }) => {
   const [stats, setStats] = useState({
     upcomingClasses: 0,
@@ -14,6 +15,15 @@ const Dashboard = ({ userRole }) => {
   const [pendingClasses, setPendingClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Role-based redirection
+  useEffect(() => {
+    if (userRole === "educator") {
+      navigate("/educator-dashboard");
+    } else if (userRole === "client_admin" || userRole === "client_site") {
+      navigate("/client-dashboard");
+    }
+  }, [userRole, navigate]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {

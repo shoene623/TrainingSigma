@@ -2,53 +2,32 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "../components/Sidebar";
+import { Calendar, MapPin } from "lucide-react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin from "@fullcalendar/interaction";
 
 const EducatorDashboard = () => {
   const [pendingClasses, setPendingClasses] = useState([]);
   const [upcomingClasses, setUpcomingClasses] = useState([]);
   const [pastClasses, setPastClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null); // State for selected class
+  const [events, setEvents] = useState([]); // Calendar events
   const [loading, setLoading] = useState(true);
-  const [educatorId, setEducatorId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // State for sidebar toggle
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchEducatorId();
     fetchClasses();
   }, []);
-
-  const fetchEducatorId = async () => {
-    try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-
-      const educatorEmail = session?.user?.email;
-
-      if (!educatorEmail) {
-        throw new Error("Educator email not found.");
-      }
-
-      const { data: educatorData, error: educatorError } = await supabase
-        .from("educators")
-        .select("pkEducatorID")
-        .eq("email1", educatorEmail)
-        .maybeSingle();
-
-      if (educatorError) throw educatorError;
-
-      setEducatorId(educatorData?.pkEducatorID || null);
-    } catch (error) {
-      console.error("Error fetching educator ID:", error.message);
-    }
-  };
 
   const fetchClasses = async () => {
     setLoading(true);
     try {
+      const today = new Date().toISOString().split("T")[0];
+
       // Fetch pending classes
       const { data: pendingData, error: pendingError } = await supabase
         .from("pending_class")
@@ -58,13 +37,7 @@ const EducatorDashboard = () => {
           preferred_date_start,
           preferred_date_end,
           status,
-          fkEducatorID,
-          coordinator_id,
-          class_date,
-          profiles_coordinator:coordinator_id (firstName, lastName),
-          profiles_assigned:queue_user_id (firstName, lastName),
-          sites:fkSiteID(SiteName, SiteCity, SiteState),
-          educators:fkEducatorID(first, last)
+          sites:fkSiteID(SiteName, SiteCity, SiteState)
         `)
         .order("preferred_date_start", { ascending: true });
 
@@ -74,7 +47,7 @@ const EducatorDashboard = () => {
       const { data: upcomingData, error: upcomingError } = await supabase
         .from("trainingLog")
         .select("pkTrainingLogID, dateofclass, subjects, sites:fkSiteID(SiteName, SiteCity, SiteState)")
-        .gte("dateofclass", new Date().toISOString().split("T")[0])
+        .gte("dateofclass", today)
         .order("dateofclass", { ascending: true });
 
       if (upcomingError) throw upcomingError;
@@ -83,7 +56,7 @@ const EducatorDashboard = () => {
       const { data: pastData, error: pastError } = await supabase
         .from("trainingLog")
         .select("pkTrainingLogID, dateofclass, subjects, sites:fkSiteID(SiteName, SiteCity, SiteState)")
-        .lt("dateofclass", new Date().toISOString().split("T")[0])
+        .lt("dateofclass", today)
         .order("dateofclass", { ascending: false });
 
       if (pastError) throw pastError;
@@ -91,15 +64,40 @@ const EducatorDashboard = () => {
       setPendingClasses(pendingData || []);
       setUpcomingClasses(upcomingData || []);
       setPastClasses(pastData || []);
+
+      // Map upcoming classes to calendar events
+      const upcomingEvents = (upcomingData || []).map((classItem) => ({
+        title: classItem.subjects || "Class",
+        start: classItem.dateofclass,
+        color: "skyblue", // Color for upcoming classes
+        extendedProps: {
+          classId: classItem.pkTrainingLogID,
+          siteName: classItem.sites?.SiteName,
+          siteCity: classItem.sites?.SiteCity,
+          siteState: classItem.sites?.SiteState,
+        },
+      }));
+
+      // Map pending classes to calendar events
+      const pendingEvents = (pendingData || []).map((classItem) => ({
+        title: classItem.class_type || "Pending Class",
+        start: classItem.preferred_date_start,
+        end: classItem.preferred_date_end, // Highlight the range
+        color: "orange", // Color for pending classes
+        extendedProps: {
+          classId: classItem.pktrainingclassid,
+          siteName: classItem.sites?.SiteName,
+          siteCity: classItem.sites?.SiteCity,
+          siteState: classItem.sites?.SiteState,
+        },
+      }));
+
+      setEvents([...upcomingEvents, ...pendingEvents]);
     } catch (error) {
       console.error("Error fetching classes:", error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClassClick = (classItem) => {
-    setSelectedClass(classItem); // Set the selected class
   };
 
   const formatDate = (dateString) => {
@@ -111,59 +109,62 @@ const EducatorDashboard = () => {
     });
   };
 
+  const handleEventClick = (info) => {
+    const classId = info.event.extendedProps.classId;
+    const selected =
+      upcomingClasses.find((classItem) => classItem.pkTrainingLogID === classId) ||
+      pendingClasses.find((classItem) => classItem.pktrainingclassid === classId);
+    setSelectedClass(selected);
+  };
+
+  const handleClassClick = (classId) => {
+    navigate(`/classes/${classId}`); // Navigate to the ClassDetail page
+  };
+
   return (
-    <div className="flex flex-col">
-      {/* Top Navbar */}
-      <div className="bg-gray-800 text-white p-4">
-        <h1 className="text-2xl font-bold">Educator Dashboard</h1>
-      </div>
+    <div className="flex bg-gray-100 min-h-screen">
+      {/* Sidebar */}
+      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} userRole="educator" />
 
       {/* Main Content */}
-      <div className="p-6 space-y-6">
-        {loading ? (
-          <div>Loading...</div>
-        ) : (
-          <>
+      <div className="flex-1 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">Educator Dashboard</h1>
+        </div>
+
+        <div className="flex flex-col md:flex-row space-y-8 md:space-y-0 md:space-x-8">
+          {/* Left Section: Pending, Upcoming, and Past Classes */}
+          <div className="w-full md:w-1/4 space-y-8">
             {/* Pending Classes */}
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Pending Classes</h2>
-              {pendingClasses.length > 0 ? (
-                <table className="min-w-full bg-white border border-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border-b">Class Type</th>
-                      <th className="px-4 py-2 border-b">Preferred Dates</th>
-                      <th className="px-4 py-2 border-b">Assigned To</th>
-                      <th className="px-4 py-2 border-b">Site</th>
-                      <th className="px-4 py-2 border-b">Educator</th>
-                      <th className="px-4 py-2 border-b">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingClasses.map((classItem) => (
-                      <tr
-                        key={classItem.pktrainingclassid}
-                        onClick={() => handleClassClick(classItem)}
-                        className="cursor-pointer hover:bg-gray-100"
-                      >
-                        <td className="px-4 py-2 border-b">{classItem.class_type}</td>
-                        <td className="px-4 py-2 border-b">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Pending Classes</h2>
+              {loading ? (
+                <p>Loading pending classes...</p>
+              ) : pendingClasses.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingClasses.map((classItem) => (
+                    <div
+                      key={classItem.pktrainingclassid}
+                      className="border p-4 rounded-md bg-white shadow hover:shadow-lg transition cursor-pointer"
+                      onClick={() => navigate("/pending-classes")} // Navigate to Pending Classes page
+                    >
+                      <div className="flex items-center mb-2">
+                        <Calendar className="mr-2 h-5 w-5 text-primary" />
+                        <p className="text-lg font-medium">
                           {formatDate(classItem.preferred_date_start)} - {formatDate(classItem.preferred_date_end)}
-                        </td>
-                        <td className="px-4 py-2 border-b">
-                          {classItem.profiles_assigned
-                            ? `${classItem.profiles_assigned.firstName} ${classItem.profiles_assigned.lastName}`
-                            : "Unassigned"}
-                        </td>
-                        <td className="px-4 py-2 border-b">{classItem.sites?.SiteName || "N/A"}</td>
-                        <td className="px-4 py-2 border-b">
-                          {classItem.educators?.first} {classItem.educators?.last}
-                        </td>
-                        <td className="px-4 py-2 border-b">{classItem.status || "N/A"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </p>
+                      </div>
+                      <p className="text-xl font-semibold">{classItem.class_type}</p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        <p>
+                          {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Status: {classItem.status}</p>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-muted-foreground">No pending classes found.</p>
               )}
@@ -171,32 +172,31 @@ const EducatorDashboard = () => {
 
             {/* Upcoming Classes */}
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Upcoming Classes</h2>
-              {upcomingClasses.length > 0 ? (
-                <table className="min-w-full bg-white border border-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border-b">Date</th>
-                      <th className="px-4 py-2 border-b">Subjects</th>
-                      <th className="px-4 py-2 border-b">Site</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {upcomingClasses.map((classItem) => (
-                      <tr
-                        key={classItem.pkTrainingLogID}
-                        onClick={() => handleClassClick(classItem)}
-                        className="cursor-pointer hover:bg-gray-100"
-                      >
-                        <td className="px-4 py-2 border-b">{formatDate(classItem.dateofclass)}</td>
-                        <td className="px-4 py-2 border-b">{classItem.subjects}</td>
-                        <td className="px-4 py-2 border-b">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Upcoming Classes</h2>
+              {loading ? (
+                <p>Loading upcoming classes...</p>
+              ) : upcomingClasses.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingClasses.map((classItem) => (
+                    <div
+                      key={classItem.pkTrainingLogID}
+                      className="border p-4 rounded-md bg-white shadow hover:shadow-lg transition cursor-pointer"
+                      onClick={() => handleClassClick(classItem.pkTrainingLogID)} // Navigate to ClassDetail page
+                    >
+                      <div className="flex items-center mb-2">
+                        <Calendar className="mr-2 h-5 w-5 text-primary" />
+                        <p className="text-lg font-medium">{formatDate(classItem.dateofclass)}</p>
+                      </div>
+                      <p className="text-xl font-semibold">{classItem.subjects}</p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        <p>
                           {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-muted-foreground">No upcoming classes scheduled.</p>
               )}
@@ -204,52 +204,52 @@ const EducatorDashboard = () => {
 
             {/* Past Classes */}
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Past Classes</h2>
-              {pastClasses.length > 0 ? (
-                <table className="min-w-full bg-white border border-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 border-b">Date</th>
-                      <th className="px-4 py-2 border-b">Subjects</th>
-                      <th className="px-4 py-2 border-b">Site</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pastClasses.map((classItem) => (
-                      <tr
-                        key={classItem.pkTrainingLogID}
-                        onClick={() => handleClassClick(classItem)}
-                        className="cursor-pointer hover:bg-gray-100"
-                      >
-                        <td className="px-4 py-2 border-b">{formatDate(classItem.dateofclass)}</td>
-                        <td className="px-4 py-2 border-b">{classItem.subjects}</td>
-                        <td className="px-4 py-2 border-b">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Past Classes</h2>
+              {loading ? (
+                <p>Loading past classes...</p>
+              ) : pastClasses.length > 0 ? (
+                <div className="space-y-4">
+                  {pastClasses.map((classItem) => (
+                    <div
+                      key={classItem.pkTrainingLogID}
+                      className="border p-4 rounded-md bg-white shadow hover:shadow-lg transition cursor-pointer"
+                      onClick={() => handleClassClick(classItem.pkTrainingLogID)} // Navigate to ClassDetail page
+                    >
+                      <div className="flex items-center mb-2">
+                        <Calendar className="mr-2 h-5 w-5 text-primary" />
+                        <p className="text-lg font-medium">{formatDate(classItem.dateofclass)}</p>
+                      </div>
+                      <p className="text-xl font-semibold">{classItem.subjects}</p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        <p>
                           {classItem.sites?.SiteName}, {classItem.sites?.SiteCity}, {classItem.sites?.SiteState}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p className="text-muted-foreground">No past classes found.</p>
               )}
             </div>
+          </div>
 
-            {/* Selected Class Details */}
-            {selectedClass && (
-              <div className="p-4 border rounded-md bg-gray-50">
-                <h2 className="text-xl font-semibold mb-4">Class Details</h2>
-                <p><strong>Class Type:</strong> {selectedClass.class_type || "N/A"}</p>
-                <p><strong>Date:</strong> {formatDate(selectedClass.dateofclass || selectedClass.class_date)}</p>
-                <p><strong>Subjects:</strong> {selectedClass.subjects || "N/A"}</p>
-                <p><strong>Site:</strong> {selectedClass.sites?.SiteName || "N/A"}</p>
-                <p><strong>City:</strong> {selectedClass.sites?.SiteCity || "N/A"}</p>
-                <p><strong>State:</strong> {selectedClass.sites?.SiteState || "N/A"}</p>
-                <p><strong>Status:</strong> {selectedClass.status || "N/A"}</p>
-              </div>
-            )}
-          </>
-        )}
+          {/* Right Section: Calendar */}
+          <div className="w-full md:w-3/4">
+            <FullCalendar
+              plugins={[dayGridPlugin, interactionPlugin]}
+              initialView="dayGridMonth"
+              events={events}
+              eventClick={handleEventClick}
+              headerToolbar={{
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,dayGridWeek,dayGridDay",
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ const CreateClassRequest = () => {
   const [formData, setFormData] = useState({
     companyId: "",
     siteId: "",
-    classTypes: [],
+    classTypes: ["Setup Time"], // Default to "Setup Time" being selected
     preferredDateStart: "",
     preferredDateEnd: "",
     notes: "",
@@ -60,6 +60,7 @@ const CreateClassRequest = () => {
     { name: "ECSI CPR Pro", hours: 3 },
     { name: "Infant CPR", hours: 2 },
     { name: "Pediatric CPR", hours: 3 },
+    { name: "Setup Time", hours: 1 },
   ];
 
   useEffect(() => {

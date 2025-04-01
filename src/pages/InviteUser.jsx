@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import RoleSelection from "../components/userManagement/RoleSelection";
 import Select from "react-select";
-import Sidebar from "../components/Sidebar"; // Import Sidebar component
-import Navbar from "../components/Navbar"; // Import Navbar component
 
 function InviteUser() {
   const [email, setEmail] = useState("");
@@ -133,90 +131,78 @@ function InviteUser() {
   }));
 
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <Sidebar />
+    <div className="p-6 space-y-8">
+      <h1 className="text-3xl font-bold text-gray-800">Invite User & Assign Role</h1>
 
-      {/* Main Content */}
-      <div className="flex-1">
-        {/* Navbar */}
-        <Navbar />
+      {/* Email Input */}
+      {role !== "educator" && (
+        <input
+          type="email"
+          placeholder="Enter Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-2 border rounded-md"
+        />
+      )}
 
-        {/* Page Content */}
-        <div className="p-6 space-y-8">
-          <h1 className="text-3xl font-bold text-gray-800">Invite User & Assign Role</h1>
+      {/* Role Selection */}
+      <RoleSelection role={role} setRole={setRole} />
 
-          {/* Email Input */}
-          {role !== "educator" && (
-            <input
-              type="email"
-              placeholder="Enter Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border rounded-md"
-            />
-          )}
-
-          {/* Role Selection */}
-          <RoleSelection role={role} setRole={setRole} />
-
-          {/* Educator Selection */}
-          {role === "educator" && (
-            <div>
-              <h2 className="text-xl font-semibold">Select Educator</h2>
-              <Select
-                options={educatorOptions}
-                value={educatorOptions.find((option) => option.value === selectedEducator?.pkEducatorID)}
-                onChange={(selectedOption) =>
-                  setSelectedEducator(
-                    educators.find((educator) => educator.pkEducatorID === selectedOption.value)
-                  )
-                }
-                className="w-full p-2 border rounded-md mb-4"
-              />
-            </div>
-          )}
-
-          {/* Company Selection */}
-          {(role === "client_admin" || role === "client_site") && (
-            <div>
-              <h2 className="text-xl font-semibold">Assign Company</h2>
-              <Select
-                options={companyOptions}
-                value={selectedCompany}
-                onChange={setSelectedCompany}
-                className="w-full p-2 border rounded-md mb-4"
-              />
-            </div>
-          )}
-
-          {/* Site Selection */}
-          {role === "client_site" && (
-            <div>
-              <h2 className="text-xl font-semibold">Assign Sites</h2>
-              <Select
-                options={siteOptions}
-                isMulti
-                value={siteOptions.filter((option) => selectedSites.includes(option.value))}
-                onChange={(selectedOptions) =>
-                  setSelectedSites(selectedOptions.map((option) => option.value))
-                }
-                className="w-full p-2 border rounded-md mb-4"
-              />
-            </div>
-          )}
-
-          {/* Invite Button */}
-          <button
-            onClick={inviteUser}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Send Invite
-          </button>
-
-          {invitationSent && <p className="text-green-600 mt-4">🎉 Invitation sent successfully!</p>}
+      {/* Educator Selection */}
+      {role === "educator" && (
+        <div>
+          <h2 className="text-xl font-semibold">Select Educator</h2>
+          <Select
+            options={educatorOptions}
+            value={educatorOptions.find((option) => option.value === selectedEducator?.pkEducatorID)}
+            onChange={(selectedOption) =>
+              setSelectedEducator(
+                educators.find((educator) => educator.pkEducatorID === selectedOption.value)
+              )
+            }
+            className="w-full p-2 border rounded-md mb-4"
+          />
         </div>
-      </div>
+      )}
+
+      {/* Company Selection */}
+      {(role === "client_admin" || role === "client_site") && (
+        <div>
+          <h2 className="text-xl font-semibold">Assign Company</h2>
+          <Select
+            options={companyOptions}
+            value={selectedCompany}
+            onChange={setSelectedCompany}
+            className="w-full p-2 border rounded-md mb-4"
+          />
+        </div>
+      )}
+
+      {/* Site Selection */}
+      {role === "client_site" && (
+        <div>
+          <h2 className="text-xl font-semibold">Assign Sites</h2>
+          <Select
+            options={siteOptions}
+            isMulti
+            value={siteOptions.filter((option) => selectedSites.includes(option.value))}
+            onChange={(selectedOptions) =>
+              setSelectedSites(selectedOptions.map((option) => option.value))
+            }
+            className="w-full p-2 border rounded-md mb-4"
+          />
+        </div>
+      )}
+
+      {/* Invite Button */}
+      <button
+        onClick={inviteUser}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        Send Invite
+      </button>
+
+      {invitationSent && <p className="text-green-600 mt-4">🎉 Invitation sent successfully!</p>}
     </div>
   );
 }

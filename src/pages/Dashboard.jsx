@@ -13,19 +13,17 @@ const Dashboard = ({ userRole }) => {
   });
   const [pendingClasses, setPendingClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [classDate, setClassDate] = useState({}); // State to track class dates for each record
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        // Fetch stats
         const [classesResponse, educatorsResponse, studentsResponse, requestsResponse] = await Promise.all([
           supabase.from("trainingLog").select("count", { count: "exact" }).gte("dateofclass", new Date().toISOString().split("T")[0]),
           supabase.from("educators").select("count", { count: "exact" }),
           supabase.from("students").select("count", { count: "exact" }),
-          supabase.from("pending_class").select("*"), // Fetch pending requests
+          supabase.from("pending_class").select("*"),
         ]);
 
         setStats({
@@ -56,72 +54,6 @@ const Dashboard = ({ userRole }) => {
     });
   };
 
-  const handleClassDateChange = (pktrainingclassid, value) => {
-    setClassDate((prev) => ({
-      ...prev,
-      [pktrainingclassid]: value,
-    }));
-  };
-
-  const handleContactEducator = async (pktrainingclassid) => {
-    try {
-      const { error } = await supabase
-        .from("pending_class")
-        .update({
-          status: "Awaiting Date",
-          offer_sent_at: new Date().toISOString(),
-        })
-        .eq("pktrainingclassid", pktrainingclassid);
-
-      if (error) throw error;
-
-      setPendingClasses((prev) =>
-        prev.map((pendingClass) =>
-          pendingClass.pktrainingclassid === pktrainingclassid
-            ? { ...pendingClass, status: "Awaiting Date", offer_sent_at: new Date().toISOString() }
-            : pendingClass
-        )
-      );
-    } catch (error) {
-      console.error("Error contacting educator:", error);
-    }
-  };
-
-  const handleDateReceived = async (pktrainingclassid) => {
-    if (!classDate[pktrainingclassid]) {
-      alert("Please provide a class date before submitting.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("pending_class")
-        .update({
-          status: "Final Confirmation",
-          educator_response_at: new Date().toISOString(),
-          class_date: classDate[pktrainingclassid],
-        })
-        .eq("pktrainingclassid", pktrainingclassid);
-
-      if (error) throw error;
-
-      setPendingClasses((prev) =>
-        prev.map((pendingClass) =>
-          pendingClass.pktrainingclassid === pktrainingclassid
-            ? {
-                ...pendingClass,
-                status: "Final Confirmation",
-                educator_response_at: new Date().toISOString(),
-                class_date: classDate[pktrainingclassid],
-              }
-            : pendingClass
-        )
-      );
-    } catch (error) {
-      console.error("Error updating final confirmation:", error);
-    }
-  };
-
   return (
     <div className="space-y-6 p-6 bg-gray-100 min-h-screen">
       {/* Header */}
@@ -141,7 +73,10 @@ const Dashboard = ({ userRole }) => {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Upcoming Classes */}
-            <div className="bg-white shadow rounded-lg p-4 flex items-center space-x-4">
+            <div
+              className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
+              onClick={() => navigate("/classes")}
+            >
               <div className="bg-blue-100 text-blue-500 p-3 rounded-full">
                 <i className="fas fa-calendar-alt"></i>
               </div>
@@ -152,7 +87,10 @@ const Dashboard = ({ userRole }) => {
             </div>
 
             {/* Total Educators */}
-            <div className="bg-white shadow rounded-lg p-4 flex items-center space-x-4">
+            <div
+              className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
+              onClick={() => navigate("/educators")}
+            >
               <div className="bg-green-100 text-green-500 p-3 rounded-full">
                 <i className="fas fa-chalkboard-teacher"></i>
               </div>
@@ -163,7 +101,10 @@ const Dashboard = ({ userRole }) => {
             </div>
 
             {/* Total Students */}
-            <div className="bg-white shadow rounded-lg p-4 flex items-center space-x-4">
+            <div
+              className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
+              onClick={() => navigate("/students")}
+            >
               <div className="bg-yellow-100 text-yellow-500 p-3 rounded-full">
                 <i className="fas fa-user-graduate"></i>
               </div>
@@ -174,7 +115,10 @@ const Dashboard = ({ userRole }) => {
             </div>
 
             {/* Pending Requests */}
-            <div className="bg-white shadow rounded-lg p-4 flex items-center space-x-4">
+            <div
+              className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
+              onClick={() => navigate("/pending-classes")}
+            >
               <div className="bg-red-100 text-red-500 p-3 rounded-full">
                 <i className="fas fa-exclamation-circle"></i>
               </div>
@@ -196,28 +140,23 @@ const Dashboard = ({ userRole }) => {
                       <th className="px-4 py-2">Class Type</th>
                       <th className="px-4 py-2">Preferred Dates</th>
                       <th className="px-4 py-2">Status</th>
-                      <th className="px-4 py-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pendingClasses.map((cls) => (
-                      <tr key={cls.pktrainingclassid} className="hover:bg-gray-50">
+                      <tr
+                        key={cls.pktrainingclassid}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => navigate("/pending-classes")}
+                      >
                         <td className="px-4 py-2">{cls.class_type || "N/A"}</td>
                         <td className="px-4 py-2">
                           {formatDate(cls.preferred_date_start)} - {formatDate(cls.preferred_date_end)}
                         </td>
                         <td className="px-4 py-2">{cls.status || "Pending"}</td>
-                        <td className="px-4 py-2">
-                          <button
-                            onClick={() => handleContactEducator(cls.pktrainingclassid)}
-                            className="text-blue-500 hover:underline"
-                          >
-                            Contact
-                          </button>
-                        </td>
                       </tr>
                     ))}
-                  </tbody>
+                  </tbody>                      
                 </table>
               </div>
             ) : (

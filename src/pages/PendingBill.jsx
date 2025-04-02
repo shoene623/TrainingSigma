@@ -56,6 +56,83 @@ const PendingBill = ({ userId }) => {
     fetchPendingBills();
   }, []);
 
+  const handleUpdateField = async (pkTrainingLogID, field, value) => {
+    try {
+      const sanitizedValue = value === "" ? null : value;
+
+      const { error } = await supabase
+        .from("trainingLog")
+        .update({ [field]: sanitizedValue })
+        .eq("pkTrainingLogID", pkTrainingLogID);
+
+      if (error) {
+        console.error(`Error updating ${field}:`, error);
+        toast({
+          variant: "destructive",
+          title: "Error Updating Field",
+          description: `Failed to update ${field}.`,
+        });
+        return;
+      }
+
+      setPendingBills((prev) =>
+        prev.map((bill) =>
+          bill.pkTrainingLogID === pkTrainingLogID
+            ? { ...bill, [field]: sanitizedValue }
+            : bill
+        )
+      );
+
+      toast({
+        title: "Field Updated",
+        description: `${field} has been successfully updated.`,
+      });
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
+      toast({
+        variant: "destructive",
+        title: "Error Updating Field",
+        description: `An unexpected error occurred while updating ${field}.`,
+      });
+    }
+  };
+
+  const handleBillClass = async (pkTrainingLogID) => {
+    try {
+      const currentDate = new Date().toISOString();
+      const { error } = await supabase
+        .from("trainingLog")
+        .update({ billdate: currentDate })
+        .eq("pkTrainingLogID", pkTrainingLogID);
+
+      if (error) {
+        console.error("Error billing class:", error);
+        toast({
+          variant: "destructive",
+          title: "Error Billing Class",
+          description: "Failed to mark the class as billed.",
+        });
+        return;
+      }
+
+      setPendingBills((prev) =>
+        prev.filter((bill) => bill.pkTrainingLogID !== pkTrainingLogID)
+      );
+
+      toast({
+        title: "Class Billed",
+        description: "The class has been successfully marked as billed.",
+      });
+    } catch (error) {
+      console.error("Error billing class:", error);
+      toast({
+        variant: "destructive",
+        title: "Error Billing Class",
+        description: "An unexpected error occurred while billing the class.",
+      });
+    }
+  };
+
   const handleOpenReminder = (bill) => {
     const email = bill.educators?.email1;
     const name = `${bill.educators?.first} ${bill.educators?.last}`;
@@ -114,42 +191,6 @@ const PendingBill = ({ userId }) => {
         variant: "destructive",
         title: "Error Sending Reminder",
         description: `An unexpected error occurred while sending the reminder.`,
-      });
-    }
-  };
-
-  const handleBillClass = async (pkTrainingLogID) => {
-    try {
-      const currentDate = new Date().toISOString();
-      const { error } = await supabase
-        .from("trainingLog")
-        .update({ billdate: currentDate })
-        .eq("pkTrainingLogID", pkTrainingLogID);
-
-      if (error) {
-        console.error("Error billing class:", error);
-        toast({
-          variant: "destructive",
-          title: "Error Billing Class",
-          description: "Failed to mark the class as billed.",
-        });
-        return;
-      }
-
-      setPendingBills((prev) =>
-        prev.filter((bill) => bill.pkTrainingLogID !== pkTrainingLogID)
-      );
-
-      toast({
-        title: "Class Billed",
-        description: "The class has been successfully marked as billed.",
-      });
-    } catch (error) {
-      console.error("Error billing class:", error);
-      toast({
-        variant: "destructive",
-        title: "Error Billing Class",
-        description: "An unexpected error occurred while billing the class.",
       });
     }
   };

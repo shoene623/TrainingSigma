@@ -172,7 +172,7 @@ const EducatorDashboard = () => {
 
             {/* Upcoming Classes */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Upcoming Classes</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Classes to Confirm</h2>
               {loading ? (
                 <p>Loading upcoming classes...</p>
               ) : upcomingClasses.length > 0 ? (

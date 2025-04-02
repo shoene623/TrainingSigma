@@ -45,13 +45,17 @@ const Navbar = ({ user, onMenuClick }) => {
   }, [])
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error("Error logging out:", error)
-    } else {
-      window.location.reload() // Reload the page after logout
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error during logout:", error.message);
+        return;
+      }
+      navigate("/login"); // Redirect to the login page
+    } catch (err) {
+      console.error("Unexpected error during logout:", err);
     }
-  }
+  };
 
   return (
     <header className="bg-white border-b border-gray-200">

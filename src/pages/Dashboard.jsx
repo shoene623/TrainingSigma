@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-
 const Dashboard = ({ userRole }) => {
   const [stats, setStats] = useState({
     upcomingClasses: 0,
     totalEducators: 0,
     totalStudents: 0,
     pendingRequests: 0,
+    pendingBills: 0,
   });
   const [pendingClasses, setPendingClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +29,25 @@ const Dashboard = ({ userRole }) => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const [classesResponse, educatorsResponse, studentsResponse, requestsResponse] = await Promise.all([
-          supabase.from("trainingLog").select("count", { count: "exact" }).gte("dateofclass", new Date().toISOString().split("T")[0]),
+        const [
+          classesResponse,
+          educatorsResponse,
+          studentsResponse,
+          requestsResponse,
+          billsResponse, // Include billsResponse here
+        ] = await Promise.all([
+          supabase
+            .from("trainingLog")
+            .select("count", { count: "exact" })
+            .gte("dateofclass", new Date().toISOString().split("T")[0]),
           supabase.from("educators").select("count", { count: "exact" }),
           supabase.from("students").select("count", { count: "exact" }),
           supabase.from("pending_class").select("*"),
+          supabase
+            .from("trainingLog")
+            .select("count", { count: "exact" })
+            .is("billdate", null)
+            .lt("dateofclass", new Date().toISOString()), // Fetch pending bills
         ]);
 
         setStats({
@@ -41,6 +55,7 @@ const Dashboard = ({ userRole }) => {
           totalEducators: educatorsResponse.count || 0,
           totalStudents: studentsResponse.count || 0,
           pendingRequests: requestsResponse.data?.length || 0,
+          pendingBills: billsResponse.count || 0, // Assign pending bills count
         });
 
         setPendingClasses(requestsResponse.data || []);
@@ -70,7 +85,10 @@ const Dashboard = ({ userRole }) => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight text-gray-800">Dashboard</h1>
         {userRole === "admin" && (
-          <Link to="/create-class" className="bg-blue-500 text-white px-4 py-2 rounded-md shadow hover:bg-blue-600">
+          <Link
+            to="/create-class"
+            className="bg-blue-500 text-white px-4 py-2 rounded-md shadow hover:bg-blue-600"
+          >
             Create New Class Request
           </Link>
         )}
@@ -96,6 +114,20 @@ const Dashboard = ({ userRole }) => {
               </div>
             </div>
 
+            {/* Pending Bills */}
+            <div
+              className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
+              onClick={() => navigate("/pending-bill")}
+            >
+              <div className="bg-red-100 text-red-500 p-3 rounded-full">
+                <i className="fas fa-file-invoice-dollar"></i>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-600">Pending Bills</h3>
+                <div className="text-2xl font-bold text-gray-800">{stats.pendingBills}</div>
+              </div>
+            </div>
+
             {/* Total Educators */}
             <div
               className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
@@ -110,19 +142,7 @@ const Dashboard = ({ userRole }) => {
               </div>
             </div>
 
-            {/* Total Students */}
-            <div
-              className="bg-white shadow rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:shadow-lg"
-              onClick={() => navigate("/students")}
-            >
-              <div className="bg-yellow-100 text-yellow-500 p-3 rounded-full">
-                <i className="fas fa-user-graduate"></i>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-600">Total Students</h3>
-                <div className="text-2xl font-bold text-gray-800">{stats.totalStudents}</div>
-              </div>
-            </div>
+
 
             {/* Pending Requests */}
             <div
@@ -166,7 +186,7 @@ const Dashboard = ({ userRole }) => {
                         <td className="px-4 py-2">{cls.status || "Pending"}</td>
                       </tr>
                     ))}
-                  </tbody>                      
+                  </tbody>
                 </table>
               </div>
             ) : (

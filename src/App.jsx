@@ -24,6 +24,8 @@ import InviteUser from "./pages/InviteUser";
 import EducatorDashboard from "./pages/EducatorDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import ClientClassRequest from "./pages/ClientClassRequest";
+import ThreeDayReminders from "./pages/ThreeDayReminders";
+import PendingBill from "./pages/PendingBill";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -217,6 +219,14 @@ function App() {
           }
         />
         <Route
+          path="/emails/three-day-reminders"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+              <ThreeDayReminders />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/educator-dashboard"
           element={
             <ProtectedRoute allowedRoles={["educator"]}>
@@ -240,6 +250,14 @@ function App() {
               <ClientClassRequest />
             </ProtectedRoute>
           }
+        />
+        <Route 
+        path = "/pending-bill"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+            <PendingBill />
+          </ProtectedRoute>
+        }
         />
         {/* Catch-All Route */}
         

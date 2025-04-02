@@ -29,10 +29,11 @@ const Sidebar = ({ open, setOpen, userRole }) => {
   const pendingClassActions = [
     { name: "Create Class", href: "/create-class" },
     { name: "View Pending Classes", href: "/pending-classes" },
+    { name: "pending-bill", href: "/pending-bill" },
   ];
 
   const emailActions = [
-    { name: "3-Day Confirmation", href: "/emails/3-day-confirmation" },
+    { name: "3-Day Confirmation", href: "/emails/three-day-reminders" },
     { name: "2-Year Reminder", href: "/emails/2-year-reminder" },
     { name: "Class Follow Up", href: "/emails/class-follow-up" },
   ];
@@ -180,6 +181,7 @@ const Sidebar = ({ open, setOpen, userRole }) => {
                     </Link>
                   ))}
                 </div>
+                
               )}
             </div>
           )}

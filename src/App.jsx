@@ -26,6 +26,8 @@ import ClientDashboard from "./pages/ClientDashboard";
 import ClientClassRequest from "./pages/ClientClassRequest";
 import ThreeDayReminders from "./pages/ThreeDayReminders";
 import PendingBill from "./pages/PendingBill";
+import Calendar from "./pages/Calendar";
+import Availability from "./pages/Availability";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -258,6 +260,22 @@ function App() {
             <PendingBill />
           </ProtectedRoute>
         }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe", "educator"]}>
+              <Calendar />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/availability"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe", "educator"]}>
+              <Availability />
+            </ProtectedRoute>
+          }
         />
         {/* Catch-All Route */}
         

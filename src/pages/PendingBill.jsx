@@ -156,7 +156,7 @@ const PendingBill = ({ userId }) => {
   const handleSendReminder = async () => {
     if (!reminderEmail) return;
 
-    const url = `${import.meta.env.VITE_SUPABASE_EDGE_FUNCTION_URL}/send-email`;
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
     console.log("Sending email to URL:", url);
 
     try {

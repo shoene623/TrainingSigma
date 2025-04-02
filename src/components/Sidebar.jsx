@@ -12,12 +12,21 @@ const Sidebar = ({ open, setOpen, userRole }) => {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: "home" },
     { name: "Classes", href: "/classes", icon: "calendar" },
+    ...(userRole === "LifeSafe" || userRole === "admin"
+      ? [
+          { name: "Calendar", href: "/calendar", icon: "calendar" }, // Add Calendar link here
+        ]
+      : []),
+    ...(userRole === "LifeSafe" || userRole === "educator"
+      ? [
+          { name: "Availability", href: "/availability", icon: "calendar" }, // Add Availability link here
+        ]
+      : []),
     ...(userRole === "client_admin"
       ? [
           { name: "Request Class", href: "/request-class", icon: "user-plus" },
         ]
       : []),
-    // The following items will only be visible to LifeSafe users
     ...(userRole === "LifeSafe"
       ? [
           { name: "Educators", href: "/educators", icon: "users" },

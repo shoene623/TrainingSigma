@@ -35,8 +35,8 @@ const Dashboard = ({ userRole }) => {
           educatorsResponse,
           studentsResponse,
           requestsResponse,
-          billsResponse, // Include billsResponse here
-          pendingBillsResponse, // Fetch the 5 oldest pending bills
+          billsResponse, 
+          pendingBillsResponse, 
         ] = await Promise.all([
           supabase
             .from("trainingLog")
@@ -177,6 +177,7 @@ const Dashboard = ({ userRole }) => {
                 <table className="min-w-full text-left text-sm text-gray-600">
                   <thead className="bg-gray-100 text-gray-800">
                     <tr>
+                      <th className="px-4 py-2">Site</th>
                       <th className="px-4 py-2">Class</th>
                       <th className="px-4 py-2">Preferred Dates</th>
                       <th className="px-4 py-2">Status</th>
@@ -189,6 +190,7 @@ const Dashboard = ({ userRole }) => {
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => navigate("/pending-classes")}
                       >
+                        <td className="px-4 py-2">{cls.sites?.SiteName || "N/A"}</td>
                         <td className="px-4 py-2">{cls.class_type || "N/A"}</td>
                         <td className="px-4 py-2">
                           {formatDate(cls.preferred_date_start)} - {formatDate(cls.preferred_date_end)}

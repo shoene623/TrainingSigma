@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "npm:node-ical": "https://esm.sh/node-ical@0.15.0"
+  }
+}

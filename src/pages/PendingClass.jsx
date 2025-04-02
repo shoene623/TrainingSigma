@@ -1,251 +1,281 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../supabaseClient";
-import Modal from "@/components/ui/Modal";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react"
+import { supabase } from "../supabaseClient"
 
-const PendingBill = ({ userId }) => {
-  const [pendingBills, setPendingBills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [reminderEmail, setReminderEmail] = useState(null);
-  const { toast } = useToast();
+const PendingClass = ({ userId }) => {
+  const [pendingClasses, setPendingClasses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [classDate, setClassDate] = useState({}) // State to track class dates for each record
 
   useEffect(() => {
-    const fetchPendingBills = async () => {
-      setLoading(true);
+    const fetchPendingClasses = async () => {
+      setLoading(true)
       try {
         const { data, error } = await supabase
-          .from("trainingLog")
+          .from("pending_class")
           .select(`
-            pkTrainingLogID,
-            dateofclass,
-            subjects,
-            billdate,
-            studentCount,
-            billable,
-            hours,
-            expenses,
-            coordinator:coordinator_id (firstName, lastName),
-            sites:fkSiteID (SiteName, SiteCity, SiteState, SiteZip),
-            educators:fkEducatorID (first, last, email1)
+            pktrainingclassid,
+            class_type,
+            preferred_date_start,
+            preferred_date_end,
+            status,
+            notes,
+            fkSiteID,
+            fkEducatorID,
+            queue_user_id,
+            coordinator_id,
+            offer_sent_at,
+            educator_response_at,
+            class_date,
+            profiles_coordinator:coordinator_id (firstName, lastName),
+            profiles_assigned:queue_user_id (firstName, lastName),
+            sites:fkSiteID (
+              SiteName,
+              companies:fkCompID (CompName)
+            ),
+            educators:fkEducatorID (first, last)
           `)
-          .is("billdate", null)
-          .lt("dateofclass", new Date().toISOString());
+          .order("preferred_date_start", { ascending: true })
 
         if (error) {
-          console.error("Error fetching pending bills:", error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to load pending bills.",
-          });
+          console.error("Error fetching pending classes:", error)
         } else {
-          setPendingBills(data || []);
+          
+          setPendingClasses(data || [])
         }
       } catch (error) {
-        console.error("Error fetching pending bills:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "An unexpected error occurred while loading pending bills.",
-        });
+        console.error("Error fetching pending classes:", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-
-    fetchPendingBills();
-  }, []);
-
-  const handleOpenReminder = (bill) => {
-    const email = bill.educators?.email1;
-    const name = `${bill.educators?.first} ${bill.educators?.last}`;
-    const siteName = bill.sites?.SiteName || "the site";
-    const subject = "Class Roster, Evaluation & Invoice Not Yet Received";
-    const html = `
-      <p>Dear ${name},</p>
-      <p>We have not yet received your roster and evaluations for the training session on <strong>${bill.subjects}</strong> scheduled for <strong>${bill.dateofclass}</strong> at <strong>${siteName}</strong>.</p>
-      <p>Please provide the necessary documents at your earliest convenience.</p>
-      <p>Thank you,</p>
-      <p>LifeSafe Services</p>
-    `;
-
-    setReminderEmail({
-      to: email,
-      subject,
-      html,
-    });
-  };
-
-  const handleSendReminder = async () => {
-    if (!reminderEmail) return;
-
-    const url = `${import.meta.env.VITE_SUPABASE_EDGE_FUNCTION_URL}/send-email`;
-    console.log("Sending email to URL:", url);
-
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify(reminderEmail),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        console.error("Error sending reminder email:", data);
-        toast({
-          variant: "destructive",
-          title: "Error Sending Reminder",
-          description: `Failed to send reminder to ${reminderEmail.to}.`,
-        });
-        return;
-      }
-
-      toast({
-        title: "Reminder Sent",
-        description: `Reminder email sent to ${reminderEmail.to}.`,
-      });
-      setReminderEmail(null);
-    } catch (error) {
-      console.error("Error sending reminder email:", error);
-      toast({
-        variant: "destructive",
-        title: "Error Sending Reminder",
-        description: `An unexpected error occurred while sending the reminder.`,
-      });
     }
-  };
 
-  const handleBillClass = async (pkTrainingLogID) => {
+    fetchPendingClasses()
+  }, [])
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }
+
+  const handleContactEducator = async (pktrainingclassid) => {
     try {
-      const currentDate = new Date().toISOString();
       const { error } = await supabase
-        .from("trainingLog")
-        .update({ billdate: currentDate })
-        .eq("pkTrainingLogID", pkTrainingLogID);
+        .from("pending_class")
+        .update({
+          status: "Awaiting Date", // Update status to "Awaiting Date"
+          offer_sent_at: new Date().toISOString(), // Set the timestamp for offer_sent_at
+        })
+        .eq("pktrainingclassid", pktrainingclassid)
 
-      if (error) {
-        console.error("Error billing class:", error);
-        toast({
-          variant: "destructive",
-          title: "Error Billing Class",
-          description: "Failed to mark the class as billed.",
-        });
-        return;
+      if (error) throw error
+
+      setPendingClasses((prev) =>
+        prev.map((pendingClass) =>
+          pendingClass.pktrainingclassid === pktrainingclassid
+            ? { ...pendingClass, status: "Awaiting Date", offer_sent_at: new Date().toISOString() }
+            : pendingClass
+        )
+      )
+    } catch (error) {
+      console.error("Error contacting educator:", error)
+    }
+  }
+
+  const handleDateReceived = async (pktrainingclassid) => {
+    if (!classDate[pktrainingclassid]) {
+      alert("Please provide a class date before submitting.")
+      return
+    }
+
+    try {
+      const pendingClass = pendingClasses.find((pc) => pc.pktrainingclassid === pktrainingclassid)
+      const coordinatorId = pendingClass?.coordinator_id
+
+      if (!coordinatorId) {
+        alert("Coordinator ID is missing for this class.")
+        return
       }
 
-      setPendingBills((prev) =>
-        prev.filter((bill) => bill.pkTrainingLogID !== pkTrainingLogID)
-      );
+      const { error } = await supabase
+        .from("pending_class")
+        .update({
+          status: "Final Confirmation",
+          educator_response_at: new Date().toISOString(),
+          class_date: classDate[pktrainingclassid],
+          queue_user_id: coordinatorId, 
+        })
+        .eq("pktrainingclassid", pktrainingclassid)
 
-      toast({
-        title: "Class Billed",
-        description: "The class has been successfully marked as billed.",
-      });
+      if (error) throw error
+
+      setPendingClasses((prev) =>
+        prev.map((pendingClass) =>
+          pendingClass.pktrainingclassid === pktrainingclassid
+            ? {
+                ...pendingClass,
+                status: "Final Confirmation",
+                educator_response_at: new Date().toISOString(),
+                class_date: classDate[pktrainingclassid],
+                queue_user_id: coordinatorId, // Update queue_user_id in the state
+              }
+            : pendingClass
+        )
+      )
     } catch (error) {
-      console.error("Error billing class:", error);
-      toast({
-        variant: "destructive",
-        title: "Error Billing Class",
-        description: "An unexpected error occurred while billing the class.",
-      });
+      console.error("Error updating final confirmation:", error)
     }
-  };
+  }
+
+  const handleConfirmDates = async (pktrainingclassid) => {
+    try {
+      const pendingClass = pendingClasses.find((pc) => pc.pktrainingclassid === pktrainingclassid)
+  
+      if (!pendingClass) {
+        alert("Class not found.")
+        return
+      }
+  
+      // Move the class to the trainingLog table
+      const { error: insertError } = await supabase.from("trainingLog").insert({
+        subjects: pendingClass.class_type,
+        dateofclass: pendingClass.class_date, 
+        fkSiteID: pendingClass.fkSiteID,
+        fkEducatorID: pendingClass.fkEducatorID,
+        notes: pendingClass.notes,
+        coordinator_id: pendingClass.coordinator_id,
+        date_turned_in: pendingClass.date_turned_in
+      })
+  
+      if (insertError) throw insertError
+  
+      // Remove the class from the pending_class table
+      const { error: deleteError } = await supabase
+        .from("pending_class")
+        .delete()
+        .eq("pktrainingclassid", pktrainingclassid)
+  
+      if (deleteError) throw deleteError
+  
+      setPendingClasses((prev) =>
+        prev.filter((pendingClass) => pendingClass.pktrainingclassid !== pktrainingclassid)
+      )
+    } catch (error) {
+      console.error("Error confirming dates:", error)
+    }
+  }
+
+  const handleRemoveClass = async (pktrainingclassid) => {
+    try {
+      const { error } = await supabase
+        .from("pending_class")
+        .delete()
+        .eq("pktrainingclassid", pktrainingclassid)
+
+      if (error) throw error
+
+      setPendingClasses((prev) =>
+        prev.filter((pendingClass) => pendingClass.pktrainingclassid !== pktrainingclassid)
+      )
+    } catch (error) {
+      console.error("Error removing class:", error)
+    }
+  }
+
+  const handleClassDateChange = (pktrainingclassid, value) => {
+    setClassDate((prev) => ({
+      ...prev,
+      [pktrainingclassid]: value,
+    }))
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Pending Bills</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Pending Classes</h1>
       {loading ? (
         <div>Loading...</div>
-      ) : pendingBills.length === 0 ? (
-        <div className="text-center py-10">No pending bills found.</div>
       ) : (
         <table className="min-w-full bg-white border border-gray-200">
           <thead>
             <tr>
+              <th className="px-4 py-2 border-b">Class Type</th>
+              <th className="px-4 py-2 border-b">Preferred Dates</th>
               <th className="px-4 py-2 border-b">Coordinator</th>
+              <th className="px-4 py-2 border-b">Assigned To</th>
+              <th className="px-4 py-2 border-b">Company</th>
               <th className="px-4 py-2 border-b">Site</th>
-              <th className="px-4 py-2 border-b">Address</th>
               <th className="px-4 py-2 border-b">Educator</th>
-              <th className="px-4 py-2 border-b">Student Count</th>
-              <th className="px-4 py-2 border-b">Billable ($)</th>
-              <th className="px-4 py-2 border-b">Hours</th>
-              <th className="px-4 py-2 border-b">Expenses ($)</th>
+              <th className="px-4 py-2 border-b">Status</th>
+              <th className="px-4 py-2 border-b">Class Date</th>
               <th className="px-4 py-2 border-b">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {pendingBills.map((bill) => (
-              <tr key={bill.pkTrainingLogID}>
+            {pendingClasses.map((pendingClass) => (
+              <tr key={pendingClass.pktrainingclassid}>
+                <td className="px-4 py-2 border-b">{pendingClass.class_type}</td>
                 <td className="px-4 py-2 border-b">
-                  {bill.coordinator?.firstName} {bill.coordinator?.lastName}
-                </td>
-                <td className="px-4 py-2 border-b">{bill.sites?.SiteName || "N/A"}</td>
-                <td className="px-4 py-2 border-b">
-                  {bill.sites?.SiteCity}, {bill.sites?.SiteState} {bill.sites?.SiteZip}
+                  {formatDate(pendingClass.preferred_date_start)} - {formatDate(pendingClass.preferred_date_end)}
                 </td>
                 <td className="px-4 py-2 border-b">
-                  {bill.educators?.first} {bill.educators?.last}
+                  {pendingClass.profiles_coordinator?.firstName} {pendingClass.profiles_coordinator?.lastName}
                 </td>
+                <td className="px-4 py-2 border-b">
+                  {pendingClass.profiles_assigned
+                    ? `${pendingClass.profiles_assigned.firstName} ${pendingClass.profiles_assigned.lastName}`
+                    : "Ellen McKee"}
+                </td>
+                <td className="px-4 py-2 border-b">
+                  {pendingClass.sites?.companies?.CompName || "N/A"}
+                </td>
+                <td className="px-4 py-2 border-b">{pendingClass.sites?.SiteName || "N/A"}</td>
+                <td className="px-4 py-2 border-b">
+                  {pendingClass.educators?.first} {pendingClass.educators?.last}
+                </td>
+                <td className="px-4 py-2 border-b">{pendingClass.status || "N/A"}</td>
                 <td className="px-4 py-2 border-b">
                   <input
-                    type="number"
-                    value={bill.studentCount || ""}
-                    onChange={(e) =>
-                      handleUpdateField(bill.pkTrainingLogID, "studentCount", e.target.value)
-                    }
-                    className="border rounded px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2 border-b">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={bill.billable || ""}
-                    onChange={(e) =>
-                      handleUpdateField(bill.pkTrainingLogID, "billable", e.target.value)
-                    }
-                    className="border rounded px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2 border-b">
-                  <input
-                    type="number"
-                    value={bill.hours || ""}
-                    onChange={(e) =>
-                      handleUpdateField(bill.pkTrainingLogID, "hours", e.target.value)
-                    }
-                    className="border rounded px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2 border-b">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={bill.expenses || ""}
-                    onChange={(e) =>
-                      handleUpdateField(bill.pkTrainingLogID, "expenses", e.target.value)
-                    }
+                    type="date"
+                    value={classDate[pendingClass.pktrainingclassid] || pendingClass.class_date || ""}
+                    onChange={(e) => handleClassDateChange(pendingClass.pktrainingclassid, e.target.value)}
                     className="border rounded px-2 py-1"
                   />
                 </td>
                 <td className="px-4 py-2 border-b space-y-2">
-                  {bill.studentCount === null && (
+                  {pendingClass.status === "Confirm Educator Dates" && (
                     <button
-                      onClick={() => handleOpenReminder(bill)}
+                      onClick={() => handleContactEducator(pendingClass.pktrainingclassid)}
                       className="bg-yellow-500 text-white px-2 py-1 rounded"
                     >
-                      Reminder
+                      Contact Educator
                     </button>
                   )}
-                  {bill.studentCount !== null && (
+                  {pendingClass.status === "Awaiting Date" && (
                     <button
-                      onClick={() => handleBillClass(bill.pkTrainingLogID)}
+                      onClick={() => handleDateReceived(pendingClass.pktrainingclassid)}
                       className="bg-green-500 text-white px-2 py-1 rounded"
                     >
-                      Bill
+                      Date Received
+                    </button>
+                  )}
+                  {pendingClass.status === "Final Confirmation" && (
+                    <button
+                      onClick={() => handleConfirmDates(pendingClass.pktrainingclassid)}
+                      className="bg-blue-500 text-white px-2 py-1 rounded"
+                    >
+                      Confirm / Add to TrainingLog
+                    </button>
+                  )}
+                  {pendingClass.coordinator_id === userId && (
+                    <button
+                      onClick={() => handleRemoveClass(pendingClass.pktrainingclassid)}
+                      className="bg-red-500 text-white px-2 py-1 rounded"
+                    >
+                      Remove Class
                     </button>
                   )}
                 </td>
@@ -254,35 +284,8 @@ const PendingBill = ({ userId }) => {
           </tbody>
         </table>
       )}
-
-      {reminderEmail && (
-        <Modal isOpen={!!reminderEmail} onClose={() => setReminderEmail(null)}>
-          <div>
-            <h2 className="text-xl font-bold mb-4">Send Reminder</h2>
-            <p><strong>To:</strong> {reminderEmail.to}</p>
-            <p><strong>Subject:</strong> {reminderEmail.subject}</p>
-            <div className="border p-2 rounded-md whitespace-pre-line">
-              {reminderEmail.html}
-            </div>
-            <div className="mt-4 text-right">
-              <button
-                onClick={handleSendReminder}
-                className="bg-blue-500 text-white px-4 py-2 rounded"
-              >
-                Send Email
-              </button>
-              <button
-                onClick={() => setReminderEmail(null)}
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded ml-2"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
-  );
-};
+  )
+}
 
-export default PendingBill;
+export default PendingClass

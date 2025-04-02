@@ -254,7 +254,7 @@ function App() {
         <Route 
         path = "/pending-bill"
         element={
-          <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+          <ProtectedRoute allowedRoles={["admin", "LifeSafe","educator"]}>
             <PendingBill />
           </ProtectedRoute>
         }

@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import Select from "react-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
+import Modal from "../components/ui/Modal";
 
 const CreateClassRequest = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +19,7 @@ const CreateClassRequest = () => {
     notes: "",
     educatorId: "",
   });
+  const [emailPreview, setEmailPreview] = useState(null); // State for email preview
   const [companies, setCompanies] = useState([]);
   const [sites, setSites] = useState([]);
   const [educators, setEducators] = useState([]);
@@ -227,40 +228,110 @@ const CreateClassRequest = () => {
         data: { session },
         error: sessionError,
       } = await supabase.auth.getSession();
-
+  
       if (sessionError) throw sessionError;
-
+  
       const userId = session?.user?.id;
-
+  
       if (!userId) {
         throw new Error("User is not authenticated.");
       }
-
-      const { error } = await supabase.from("pending_class").insert({
-        class_type: formData.classTypes.join(", "),
-        preferred_date_start: formData.preferredDateStart,
-        preferred_date_end: formData.preferredDateEnd,
-        coordinator_id: userId,
-        fkSiteID: formData.siteId,
-        notes: formData.notes,
-        fkEducatorID: formData.educatorId,
-        queue_user_id: "0ae68bcb-e6f4-4b59-ba1b-c73b46ac8820",
-        status: "Confirm Educator Dates",
-      });
-
+  
+      // Insert the class request into the `pending_class` table
+      const { data, error } = await supabase
+        .from("pending_class")
+        .insert({
+          class_type: formData.classTypes.join(", "),
+          preferred_date_start: formData.preferredDateStart,
+          preferred_date_end: formData.preferredDateEnd,
+          coordinator_id: userId,
+          fkSiteID: formData.siteId,
+          notes: formData.notes,
+          fkEducatorID: formData.educatorId,
+          status: "Confirm Educator Dates",
+        })
+        .select(`
+          *,
+          Site:fkSiteID (SiteName, SiteAdd1, SiteCity, SiteState, SiteZip),
+          Educator:fkEducatorID (first, last),
+          Coordinator:coordinator_id (firstName, lastName)
+        `) // Include related Site, Educator, and Coordinator fields
+        .single();
+  
       if (error) throw error;
-
-      toast({
-        title: "Class Request Created",
-        description: "The class request has been successfully created.",
+  
+      // Format the email content
+      const emailContent = `
+        <p>A new class request has been submitted:</p>
+        <ul>
+          <li><strong>Class Types:</strong> ${data.class_type}</li>
+          <li><strong>Preferred Start Date:</strong> ${new Date(data.preferred_date_start).toLocaleDateString()}</li>
+          <li><strong>Preferred End Date:</strong> ${new Date(data.preferred_date_end).toLocaleDateString()}</li>
+          <li><strong>Site Name:</strong> ${data.Site?.SiteName || "N/A"}</li>
+          <li><strong>Site Address:</strong> ${data.Site?.SiteAdd1 || "N/A"}, ${data.Site?.SiteCity || "N/A"}, ${data.Site?.SiteState || "N/A"} ${data.Site?.SiteZip || "N/A"}</li>
+          <li><strong>Notes:</strong> ${data.notes || "None"}</li>
+          <li><strong>Preffered Educator:</strong> ${data.Educator?.first || "N/A"} ${data.Educator?.last || "N/A"}</li>
+          <li><strong>Coordinator:</strong> ${data.Coordinator?.firstName || "N/A"} ${data.Coordinator?.lastName || "N/A"}</li>
+        </ul>
+      `;
+  
+      // Set the email preview state and open the modal
+      setEmailPreview({
+        to: "sean@lifesafeservices.com",
+        subject: "New Class Request Submitted",
+        html: emailContent,
       });
-      navigate("/dashboard");
     } catch (error) {
       console.error("Error creating class request:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to create the class request.",
+      });
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailPreview) return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify(emailPreview),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Error sending email:", data);
+        toast({
+          variant: "destructive",
+          title: "Error Sending Email",
+          description: "Failed to send the email notification.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Class Request Created",
+        description: "The class request has been successfully created and an email notification has been sent.",
+      });
+
+      setEmailPreview(null); // Close the modal
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast({
+        variant: "destructive",
+        title: "Error Sending Email",
+        description: "An unexpected error occurred while sending the email.",
       });
     }
   };
@@ -494,6 +565,33 @@ const CreateClassRequest = () => {
           Submit Request
         </Button>
       </form>
+      {/* Email Preview Modal */}
+      {emailPreview && (
+        <Modal isOpen={!!emailPreview} onClose={() => setEmailPreview(null)}>
+          <div>
+            <h2 className="text-xl font-bold mb-4">Email Preview</h2>
+            <p><strong>To:</strong> {emailPreview.to}</p>
+            <p><strong>Subject:</strong> {emailPreview.subject}</p>
+            <div className="border p-2 rounded-md whitespace-pre-line">
+              {emailPreview.html}
+            </div>
+            <div className="mt-4 text-right">
+              <Button
+                onClick={handleSendEmail}
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+              >
+                Send Email
+              </Button>
+              <Button
+                onClick={() => setEmailPreview(null)}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded ml-2"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -44,7 +44,14 @@ const Dashboard = ({ userRole }) => {
             .gte("dateofclass", new Date().toISOString().split("T")[0]),
           supabase.from("educators").select("count", { count: "exact" }),
           supabase.from("students").select("count", { count: "exact" }),
-          supabase.from("pending_class").select("*"),
+          supabase.from("pending_class").select(`
+            pktrainingclassid,
+            class_type,
+            preferred_date_start,
+            preferred_date_end,
+            status,
+            sites:fkSiteID (SiteName) // <--- IMPORTANT: Ensure you are selecting SiteName here
+          `),
           supabase
             .from("trainingLog")
             .select("count", { count: "exact" })

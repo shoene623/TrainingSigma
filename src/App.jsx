@@ -27,7 +27,7 @@ import ClientClassRequest from "./pages/ClientClassRequest";
 import ThreeDayReminders from "./pages/ThreeDayReminders";
 import PendingBill from "./pages/PendingBill";
 import Calendar from "./pages/Calendar";
-import Availability from "./pages/Availability";
+import EditPendingClass from "./pages/EditPendingClass";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -156,6 +156,22 @@ function App() {
             }
           />
           <Route
+          path="/invite-user"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+              <InviteUser />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe", "educator"]}>
+              <Calendar />
+            </ProtectedRoute>
+          }
+        />
+          <Route
             path="assign-educator/:requestId"
             element={
               <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
@@ -211,16 +227,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-        </Route>
-        <Route
-          path="/invite-user"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
-              <InviteUser />
-            </ProtectedRoute>
-          }
-        />
-        <Route
+                  <Route
           path="/emails/three-day-reminders"
           element={
             <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
@@ -228,6 +235,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route 
+        path = "/pending-bill"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "LifeSafe","educator"]}>
+            <PendingBill />
+          </ProtectedRoute>
+        }
+        />
+        
+ 
+
         <Route
           path="/educator-dashboard"
           element={
@@ -253,34 +271,23 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route 
-        path = "/pending-bill"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "LifeSafe","educator"]}>
-            <PendingBill />
-          </ProtectedRoute>
-        }
-        />
+
+
         <Route
-          path="/calendar"
+          path="/edit-pending-class/:id"
           element={
-            <ProtectedRoute allowedRoles={["admin", "LifeSafe", "educator"]}>
-              <Calendar />
+            <ProtectedRoute allowedRoles={["admin", "LifeSafe"]}>
+              <EditPendingClass />
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/availability"
-          element={
-            <ProtectedRoute allowedRoles={["admin", "LifeSafe", "educator"]}>
-              <Availability />
-            </ProtectedRoute>
-          }
-        />
+
         {/* Catch-All Route */}
         
         <Route path="*" element={<NotFound />} />
+        </Route>
       </Routes>
+      
     </BrowserRouter>
   );
 }

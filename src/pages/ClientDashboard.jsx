@@ -7,14 +7,12 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Calendar, MapPin } from "lucide-react";
-import Sidebar from "../components/Sidebar"; // Import Sidebar
 
 const ClientDashboard = () => {
   const [upcomingClasses, setUpcomingClasses] = useState([]);
   const [pastClasses, setPastClasses] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // State for sidebar toggle
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -110,8 +108,7 @@ const ClientDashboard = () => {
 
   return (
     <div className="flex bg-gray-100 min-h-screen">
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} userRole="client_admin" />
+
 
       {/* Main Content */}
       <div className="flex-1 p-6">

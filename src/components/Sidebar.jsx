@@ -17,11 +17,7 @@ const Sidebar = ({ open, setOpen, userRole }) => {
           { name: "Calendar", href: "/calendar", icon: "calendar" }, // Add Calendar link here
         ]
       : []),
-    ...(userRole === "LifeSafe" || userRole === "educator"
-      ? [
-          { name: "Availability", href: "/availability", icon: "calendar" }, // Add Availability link here
-        ]
-      : []),
+
     ...(userRole === "client_admin"
       ? [
           { name: "Request Class", href: "/request-class", icon: "user-plus" },
@@ -37,8 +33,8 @@ const Sidebar = ({ open, setOpen, userRole }) => {
 
   const pendingClassActions = [
     { name: "Create Class", href: "/create-class" },
-    { name: "View Pending Classes", href: "/pending-classes" },
-    { name: "pending-bill", href: "/pending-bill" },
+    { name: "Pending Classes", href: "/pending-classes" },
+    { name: "Pending Bill", href: "/pending-bill" },
   ];
 
   const emailActions = [

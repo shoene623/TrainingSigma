@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/Sidebar"; // Import Sidebar
 import { Input } from "@/components/ui/input";
+import Modal from "../components/ui/Modal";
+import { Button } from "@/components/ui/button";
 
 const ClientClassRequest = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +14,7 @@ const ClientClassRequest = () => {
     preferredDateEnd: "",
     notes: "",
   });
-  const [sidebarOpen, setSidebarOpen] = useState(false); // State for sidebar toggle
+  const [emailPreview, setEmailPreview] = useState(null); // State for email preview
   const navigate = useNavigate();
 
   const classTypes = [
@@ -49,42 +50,79 @@ const ClientClassRequest = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-
-      const userId = session?.user?.id;
-
-      if (!userId) {
-        throw new Error("User is not authenticated.");
-      }
-
-      const { error } = await supabase.from("pending_class").insert({
-        class_type: formData.classTypes.join(", "),
-        preferred_date_start: formData.preferredDateStart,
-        preferred_date_end: formData.preferredDateEnd,
-        notes: formData.notes,
-        coordinator_id: userId,
-        status: "Pending Review",
-      });
+      // Insert the class request into the `pending_class` table
+      const { data, error } = await supabase
+        .from("pending_class")
+        .insert({
+          class_type: formData.classTypes.join(", "),
+          preferred_date_start: formData.preferredDateStart,
+          preferred_date_end: formData.preferredDateEnd,
+          notes: formData.notes,
+          status: "Pending Review",
+        })
+        .select("*")
+        .single();
 
       if (error) throw error;
 
-      alert("Class request submitted successfully!");
-      navigate("/client-dashboard");
+      // Format the email content
+      const emailContent = `
+        <p>A new class request has been submitted:</p>
+        <ul>
+          <li><strong>Class Types:</strong> ${data.class_type}</li>
+          <li><strong>Preferred Start Date:</strong> ${new Date(data.preferred_date_start).toLocaleDateString()}</li>
+          <li><strong>Preferred End Date:</strong> ${new Date(data.preferred_date_end).toLocaleDateString()}</li>
+          <li><strong>Notes:</strong> ${data.notes || "None"}</li>
+        </ul>
+      `;
+
+      // Set the email preview state and open the modal
+      setEmailPreview({
+        to: "sean@lifesafeservices.com",
+        subject: "New Class Request Submitted",
+        html: emailContent,
+      });
     } catch (error) {
       console.error("Error submitting class request:", error);
       alert("Failed to submit the class request.");
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!emailPreview) return;
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify(emailPreview),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Error sending email:", data);
+        alert("Failed to send the email notification.");
+        return;
+      }
+
+      alert("Class request submitted successfully and email sent!");
+      setEmailPreview(null); // Close the modal
+      navigate("/client-dashboard");
+    } catch (error) {
+      console.error("Error sending email:", error);
+      alert("An unexpected error occurred while sending the email.");
+    }
+  };
+
   return (
     <div className="flex bg-gray-100 min-h-screen">
-      {/* Sidebar */}
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} userRole="client_admin" />
 
       {/* Main Content */}
       <div className="flex-1 p-6">
@@ -173,6 +211,34 @@ const ClientClassRequest = () => {
             Submit Request
           </button>
         </form>
+
+        {/* Email Preview Modal */}
+        {emailPreview && (
+          <Modal isOpen={!!emailPreview} onClose={() => setEmailPreview(null)}>
+            <div>
+              <h2 className="text-xl font-bold mb-4">Email Preview</h2>
+              <p><strong>To:</strong> {emailPreview.to}</p>
+              <p><strong>Subject:</strong> {emailPreview.subject}</p>
+              <div className="border p-2 rounded-md whitespace-pre-line">
+                {emailPreview.html}
+              </div>
+              <div className="mt-4 text-right">
+                <Button
+                  onClick={handleSendEmail}
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Send Email
+                </Button>
+                <Button
+                  onClick={() => setEmailPreview(null)}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded ml-2"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   );

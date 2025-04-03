@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react"
 import { supabase } from "../supabaseClient"
+import { useNavigate } from "react-router-dom"
 
 const PendingClass = ({ userId }) => {
   const [pendingClasses, setPendingClasses] = useState([])
   const [loading, setLoading] = useState(true)
-  const [classDate, setClassDate] = useState({}) // State to track class dates for each record
+  const [classDate, setClassDate] = useState({}) 
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPendingClasses = async () => {
@@ -62,6 +64,10 @@ const PendingClass = ({ userId }) => {
     })
   }
 
+  const handleEditClass = (classId) => {
+    navigate(`/edit-pending-class/${classId}`);
+  };
+
   const handleContactEducator = async (pktrainingclassid) => {
     try {
       const { error } = await supabase
@@ -100,6 +106,7 @@ const PendingClass = ({ userId }) => {
         alert("Coordinator ID is missing for this class.")
         return
       }
+      
 
       const { error } = await supabase
         .from("pending_class")
@@ -215,73 +222,86 @@ const PendingClass = ({ userId }) => {
             </tr>
           </thead>
           <tbody>
-            {pendingClasses.map((pendingClass) => (
-              <tr key={pendingClass.pktrainingclassid}>
-                <td className="px-4 py-2 border-b">{pendingClass.class_type}</td>
-                <td className="px-4 py-2 border-b">
-                  {formatDate(pendingClass.preferred_date_start)} - {formatDate(pendingClass.preferred_date_end)}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {pendingClass.profiles_coordinator?.firstName} {pendingClass.profiles_coordinator?.lastName}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {pendingClass.profiles_assigned
-                    ? `${pendingClass.profiles_assigned.firstName} ${pendingClass.profiles_assigned.lastName}`
-                    : "Ellen McKee"}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  {pendingClass.sites?.companies?.CompName || "N/A"}
-                </td>
-                <td className="px-4 py-2 border-b">{pendingClass.sites?.SiteName || "N/A"}</td>
-                <td className="px-4 py-2 border-b">
-                  {pendingClass.educators?.first} {pendingClass.educators?.last}
-                </td>
-                <td className="px-4 py-2 border-b">{pendingClass.status || "N/A"}</td>
-                <td className="px-4 py-2 border-b">
-                  <input
-                    type="date"
-                    value={classDate[pendingClass.pktrainingclassid] || pendingClass.class_date || ""}
-                    onChange={(e) => handleClassDateChange(pendingClass.pktrainingclassid, e.target.value)}
-                    className="border rounded px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2 border-b space-y-2">
-                  {pendingClass.status === "Confirm Educator Dates" && (
-                    <button
-                      onClick={() => handleContactEducator(pendingClass.pktrainingclassid)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded"
-                    >
-                      Contact Educator
-                    </button>
-                  )}
-                  {pendingClass.status === "Awaiting Date" && (
-                    <button
-                      onClick={() => handleDateReceived(pendingClass.pktrainingclassid)}
-                      className="bg-green-500 text-white px-2 py-1 rounded"
-                    >
-                      Date Received
-                    </button>
-                  )}
-                  {pendingClass.status === "Final Confirmation" && (
-                    <button
-                      onClick={() => handleConfirmDates(pendingClass.pktrainingclassid)}
-                      className="bg-blue-500 text-white px-2 py-1 rounded"
-                    >
-                      Confirm / Add to TrainingLog
-                    </button>
-                  )}
-                  {pendingClass.coordinator_id === userId && (
-                    <button
-                      onClick={() => handleRemoveClass(pendingClass.pktrainingclassid)}
-                      className="bg-red-500 text-white px-2 py-1 rounded"
-                    >
-                      Remove Class
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+      {pendingClasses.map((pendingClass) => (
+        <tr key={pendingClass.pktrainingclassid}>
+          <td className="px-4 py-2 border-b">{pendingClass.class_type}</td>
+          <td className="px-4 py-2 border-b">
+            {formatDate(pendingClass.preferred_date_start)} - {formatDate(pendingClass.preferred_date_end)}
+          </td>
+          <td className="px-4 py-2 border-b">
+            {pendingClass.profiles_coordinator?.firstName} {pendingClass.profiles_coordinator?.lastName}
+          </td>
+          <td className="px-4 py-2 border-b">
+            {pendingClass.profiles_assigned
+              ? `${pendingClass.profiles_assigned.firstName} ${pendingClass.profiles_assigned.lastName}`
+              : "Ellen McKee"}
+          </td>
+          <td className="px-4 py-2 border-b">
+            {pendingClass.sites?.companies?.CompName || "N/A"}
+          </td>
+          <td className="px-4 py-2 border-b">{pendingClass.sites?.SiteName || "N/A"}</td>
+          <td className="px-4 py-2 border-b">
+            {pendingClass.educators?.first} {pendingClass.educators?.last}
+          </td>
+          <td className="px-4 py-2 border-b">{pendingClass.status || "N/A"}</td>
+          <td className="px-4 py-2 border-b">
+            <input
+              type="date"
+              value={classDate[pendingClass.pktrainingclassid] || pendingClass.class_date || ""}
+              onChange={(e) => handleClassDateChange(pendingClass.pktrainingclassid, e.target.value)}
+              className="border rounded px-2 py-1"
+            />
+          </td>
+          <td className="px-4 py-2 border-b space-y-2">
+            {(pendingClass.status === "Receive from Client" ||
+              !pendingClass.coordinator_id || // Condition for missing coordinator_id
+              (pendingClass.coordinator_id &&
+                !pendingClass.profiles_coordinator?.firstName &&
+                !pendingClass.profiles_coordinator?.lastName)) && (
+              <button
+                onClick={() => handleEditClass(pendingClass.pktrainingclassid)}
+                className="bg-indigo-500 text-white px-2 py-1 rounded"
+              >
+                Edit Class
+              </button>
+            )}
+            {pendingClass.status === "Confirm Educator Dates" && (
+              <button
+                onClick={() => handleContactEducator(pendingClass.pktrainingclassid)}
+                className="bg-yellow-500 text-white px-2 py-1 rounded"
+              >
+                Contact Educator
+              </button>
+            )}
+            {pendingClass.status === "Awaiting Date" && (
+              <button
+                onClick={() => handleDateReceived(pendingClass.pktrainingclassid)}
+                className="bg-green-500 text-white px-2 py-1 rounded"
+              >
+                Date Received
+              </button>
+            )}
+            {pendingClass.status === "Final Confirmation" && (
+              <button
+                onClick={() => handleConfirmDates(pendingClass.pktrainingclassid)}
+                className="bg-blue-500 text-white px-2 py-1 rounded"
+              >
+                Confirm / Add to TrainingLog
+              </button>
+            )}
+            {pendingClass.coordinator_id === userId && (
+              <button
+                onClick={() => handleRemoveClass(pendingClass.pktrainingclassid)}
+                className="bg-red-500 text-white px-2 py-1 rounded"
+              >
+                Remove Class
+              </button>
+            )}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  );
         </table>
       )}
     </div>

@@ -46,7 +46,7 @@ const Calendar = () => {
     setLoading(true);
     try {
       const today = new Date().toISOString().split("T")[0];
-
+  
       // Fetch pending classes
       const { data: pendingData, error: pendingError } = await supabase
         .from("pending_class")
@@ -59,9 +59,14 @@ const Calendar = () => {
           sites:fkSiteID(SiteName, SiteCity, SiteState)
         `)
         .order("preferred_date_start", { ascending: true });
-
+  
       if (pendingError) throw pendingError;
-
+  
+      // Filter pending classes by selected educator if applicable
+      const filteredPendingData = selectedEducator
+        ? pendingData.filter((classItem) => classItem.fkEducatorID === selectedEducator.value)
+        : pendingData;
+  
       // Fetch confirmed classes
       const { data: confirmedData, error: confirmedError } = await supabase
         .from("trainingLog")
@@ -74,46 +79,68 @@ const Calendar = () => {
         `)
         .gte("dateofclass", today)
         .order("dateofclass", { ascending: true });
-
+  
       if (confirmedError) throw confirmedError;
-
+  
+      // Filter confirmed classes by selected educator if applicable
+      const filteredConfirmedData = selectedEducator
+        ? confirmedData.filter((classItem) => classItem.fkEducatorID === selectedEducator.value)
+        : confirmedData;
+  
       // Fetch availability if checkbox is checked and an educator is selected
       let availabilityData = [];
       if (showAvailability && selectedEducator) {
         const { data: availability, error: availabilityError } = await supabase
           .from("availability")
           .select(`
-            available_date,
-            end_date,
-            start_time,
-            end_time
+            id,
+            start_datetime,
+            end_datetime,
+            is_all_day,
+            rrule,
+            summary,
+            description,
+            timezone,
+            status,
+            transparency,
+            dtstamp,
+            sequence
           `)
           .eq("fkEducatorID", selectedEducator.value);
-
+  
         if (availabilityError) {
           console.error("Error fetching availability:", availabilityError.message);
         } else {
-          console.log("Fetched availability data:", availability); // Debugging log
+          availabilityData = availability.map((item) => {
+            const isAllDay = item.is_all_day;
+            const start = new Date(item.start_datetime).toISOString();
+            const end = isAllDay
+              ? new Date(new Date(item.end_datetime).getTime() + 24 * 60 * 60 * 1000).toISOString()
+              : new Date(item.end_datetime).toISOString();
+  
+            return {
+              title: item.summary || "Available",
+              start,
+              end,
+              color: "green",
+              allDay: isAllDay,
+              extendedProps: {
+                description: item.description,
+                timezone: item.timezone,
+                status: item.status,
+                transparency: item.transparency,
+                dtstamp: item.dtstamp,
+                sequence: item.sequence,
+                rrule: item.rrule,
+              },
+            };
+          });
         }
-
-        availabilityData = availability.map((item) => ({
-          title: "Available",
-          start: item.start_time
-            ? `${item.available_date}T${item.start_time}`
-            : item.available_date, // Use start_time if available, otherwise use the date
-          end: item.end_time
-            ? `${item.end_date || item.available_date}T${item.end_time}`
-            : item.end_date || item.available_date, // Use end_time if available, otherwise use the date
-          color: "green", // Availability color
-          allDay: !item.start_time && !item.end_time, // Mark as all-day if no time is provided
-        }));
-
-        console.log("Mapped availability data:", availabilityData); // Debugging log
       }
-
+  
       // Combine and filter data
       const combinedData = [
-        ...pendingData.map((classItem) => ({
+        ...filteredPendingData.map((classItem) => ({
           title: classItem.class_type || "Pending Class",
           start: classItem.preferred_date_start,
           end: classItem.preferred_date_end,
@@ -125,7 +152,7 @@ const Calendar = () => {
             siteState: classItem.sites?.SiteState,
           },
         })),
-        ...confirmedData.map((classItem) => ({
+        ...filteredConfirmedData.map((classItem) => ({
           title: classItem.subjects || "Confirmed Class",
           start: classItem.dateofclass,
           color: "skyblue", // Confirmed class color
@@ -138,21 +165,10 @@ const Calendar = () => {
         })),
         ...availabilityData, // Add availability data
       ];
-
+  
       console.log("Combined data for calendar:", combinedData); // Debugging log
-
-      // Apply educator filter
-      const filteredData = combinedData.filter((event) => {
-        return (
-          !selectedEducator || 
-          event.extendedProps?.educatorId === selectedEducator.value || 
-          event.title === "Available" // Include availability events
-        );
-      });
-
-      console.log("Filtered data for calendar:", filteredData); // Debugging log
-
-      setEvents(filteredData);
+  
+      setEvents(combinedData);
     } catch (error) {
       console.error("Error fetching classes:", error.message);
     } finally {
@@ -194,20 +210,21 @@ const Calendar = () => {
         />
       </div>
 
-      {/* Availability Checkbox */}
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="showAvailability"
-          checked={showAvailability}
-          onChange={(e) => setShowAvailability(e.target.checked)}
-          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-        />
-        <label htmlFor="showAvailability" className="text-sm font-medium text-gray-700">
-          Show Availability
-        </label>
-      </div>
-
+     {/* Availability Checkbox */}
+{selectedEducator && (
+  <div className="flex items-center space-x-2">
+    <input
+      type="checkbox"
+      id="showAvailability"
+      checked={showAvailability}
+      onChange={(e) => setShowAvailability(e.target.checked)}
+      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+    />
+    <label htmlFor="showAvailability" className="text-sm font-medium text-gray-700">
+      Show Availability
+    </label>
+  </div>
+)}
       {/* Calendar */}
       <div className="bg-white shadow rounded-lg p-4">
         {loading ? (
